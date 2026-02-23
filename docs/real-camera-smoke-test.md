@@ -52,6 +52,10 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `calibration.notes` contains `frame-derived` when real capture frames were available.
 - `calibrationQuality.reprojectionResidualSamplesPx` has at least `3` values.
 - `calibrationQuality.scaleResidualSamplesMm` has at least `3` values.
+- `calibrationQuality.gatePass` is `true` for a passing run.
+- `calibrationQuality.gateFailures` is empty for a passing run.
+- `calibrationQuality.usedIntrinsicFrames >= calibrationQuality.minimumRequiredIntrinsicFrames`.
+- `calibrationQuality.underlayScaleConfidence` and `calibrationQuality.underlayPoseQuality` are each in range `[0,1]`.
 - `underlayVerification.measuredBoxSizesMm` has at least `3` values.
 - `underlayVerification.inlierBoxSizesMm` has at least `3` values.
 - `underlayVerification.fitConfidence` is in range `[0,1]` (higher is better fit confidence).
@@ -66,6 +70,11 @@ $j = Get-Content "<path>" -Raw | ConvertFrom-Json
 "CalibrationNotes={0}" -f $j.calibration.notes
 "ReprojectionSamples={0}" -f $j.calibrationQuality.reprojectionResidualSamplesPx.Count
 "ScaleSamples={0}" -f $j.calibrationQuality.scaleResidualSamplesMm.Count
+"CalibrationGatePass={0}" -f $j.calibrationQuality.gatePass
+"CalibrationGateFailures={0}" -f $j.calibrationQuality.gateFailures.Count
+"IntrinsicFramesUsed={0}/{1}" -f $j.calibrationQuality.usedIntrinsicFrames, $j.calibrationQuality.minimumRequiredIntrinsicFrames
+"UnderlayScaleConfidence={0}" -f $j.calibrationQuality.underlayScaleConfidence
+"UnderlayPoseQuality={0}" -f $j.calibrationQuality.underlayPoseQuality
 "UnderlaySamples={0}" -f $j.underlayVerification.measuredBoxSizesMm.Count
 "UnderlayInlierSamples={0}" -f $j.underlayVerification.inlierBoxSizesMm.Count
 "UnderlayFitConfidence={0}" -f $j.underlayVerification.fitConfidence
