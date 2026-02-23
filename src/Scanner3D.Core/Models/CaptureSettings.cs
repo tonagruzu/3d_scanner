@@ -7,4 +7,6 @@ public sealed record CaptureSettings(
     string UnderlayPattern,
     string LightingProfile,
     bool AllowMockFallback = false,
-    string? PreferredBackend = null);
+    string? PreferredBackend = null,
+    int MinimumAcceptedFrameCount = 8,
+    int MaxCaptureAttempts = 3);

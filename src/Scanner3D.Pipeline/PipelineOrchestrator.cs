@@ -92,11 +92,11 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             var meshPath = await meshService.GenerateObjAsync(session.SessionId, measurements, outputDirectory, cancellationToken);
         var sketches = await sketchService.GenerateOrthographicSketchesAsync(session.SessionId, measurements, outputDirectory, cancellationToken);
 
-        var captureGatePass = capture.AcceptedFrameCount > 0;
+        var captureGatePass = capture.ReliabilityTargetMet;
         var success = captureGatePass && calibration.IsWithinTolerance && underlayVerification.Pass && validation.Pass;
         var message = success
             ? "Pipeline stub executed. Capture, underlay, calibration, and dimensional checks are within configured tolerances."
-            : "Pipeline stub executed with failed quality gates. Review capture, underlay, calibration, and validation outputs.";
+            : $"Pipeline stub executed with failed quality gates. Review capture, underlay, calibration, and validation outputs. Capture gate detail: {capture.ReliabilityFailureReason ?? "n/a"}";
 
         var qualityReport = new ScanQualityReport(
             SessionId: session.SessionId,

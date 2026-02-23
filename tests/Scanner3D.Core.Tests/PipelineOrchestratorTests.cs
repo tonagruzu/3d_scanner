@@ -15,7 +15,7 @@ public class PipelineOrchestratorTests
 
         var result = await orchestrator.ExecuteAsync(session);
 
-        var expectedSuccess = result.Capture.AcceptedFrameCount > 0
+        var expectedSuccess = result.Capture.ReliabilityTargetMet
             && result.Calibration.IsWithinTolerance
             && result.UnderlayVerification.Pass
             && result.Validation.Pass;

@@ -22,6 +22,11 @@ public class CaptureServiceTests
         Assert.Equal(1920, result.SelectedMode.Width);
         Assert.Equal(1080, result.SelectedMode.Height);
         Assert.Equal("mock", result.CaptureBackend);
+        Assert.Equal(8, result.RequiredAcceptedFrameCount);
+        Assert.True(result.CaptureAttemptsUsed >= 1);
+        Assert.Equal(3, result.MaxCaptureAttempts);
+        Assert.False(result.ReliabilityTargetMet);
+        Assert.False(string.IsNullOrWhiteSpace(result.ReliabilityFailureReason));
         Assert.True(result.ExposureLockRequested);
         Assert.True(result.WhiteBalanceLockRequested);
         Assert.Null(result.ExposureLockVerified);
@@ -44,6 +49,85 @@ public class CaptureServiceTests
         Assert.NotEqual("missing-camera", result.CameraDeviceId);
         Assert.Equal(5, result.CapturedFrameCount);
         Assert.True(result.AcceptedFrameCount >= 1);
+        Assert.Equal(5, result.RequiredAcceptedFrameCount);
+        Assert.True(result.ReliabilityTargetMet);
+        Assert.Null(result.ReliabilityFailureReason);
+    }
+
+    [Fact]
+    public async Task CaptureAsync_RetriesUntilReliabilityTargetIsMet()
+    {
+        var firstAttemptFrames = new List<CaptureFrame>
+        {
+            new CaptureFrame("a1-f1", DateTimeOffset.UtcNow, 0.9, 0.9, true),
+            new CaptureFrame("a1-f2", DateTimeOffset.UtcNow, 0.5, 0.5, false),
+            new CaptureFrame("a1-f3", DateTimeOffset.UtcNow, 0.5, 0.5, false)
+        };
+
+        var secondAttemptFrames = new List<CaptureFrame>
+        {
+            new CaptureFrame("a2-f1", DateTimeOffset.UtcNow, 0.9, 0.9, true),
+            new CaptureFrame("a2-f2", DateTimeOffset.UtcNow, 0.9, 0.9, true),
+            new CaptureFrame("a2-f3", DateTimeOffset.UtcNow, 0.9, 0.9, true)
+        };
+
+        var sequenceProvider = new SequenceFrameProvider([
+            new FrameCaptureResult(firstAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc")),
+            new FrameCaptureResult(secondAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc"))
+        ]);
+
+        var service = new CaptureService(
+            new StaticDeviceDiscovery([
+                new CameraDeviceInfo("cam-retry", "Retry Cam", true, null)
+            ]),
+            new RecordingModeProvider([
+                new CameraCaptureMode(1280, 720, 30, "YUY2")
+            ]),
+            sequenceProvider);
+
+        var result = await service.CaptureAsync(
+            new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "cam-retry", "reliability-test"),
+            new CaptureSettings(3, true, true, "grid", "diffuse", MinimumAcceptedFrameCount: 3, MaxCaptureAttempts: 3));
+
+        Assert.True(result.ReliabilityTargetMet);
+        Assert.Equal(3, result.AcceptedFrameCount);
+        Assert.Equal(2, result.CaptureAttemptsUsed);
+        Assert.Equal(2, sequenceProvider.Calls);
+        Assert.Null(result.ReliabilityFailureReason);
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ReturnsClearFailureReasonWhenRetriesExhausted()
+    {
+        var weakAttemptFrames = new List<CaptureFrame>
+        {
+            new CaptureFrame("w-f1", DateTimeOffset.UtcNow, 0.9, 0.9, true),
+            new CaptureFrame("w-f2", DateTimeOffset.UtcNow, 0.5, 0.5, false),
+            new CaptureFrame("w-f3", DateTimeOffset.UtcNow, 0.5, 0.5, false)
+        };
+
+        var sequenceProvider = new SequenceFrameProvider([
+            new FrameCaptureResult(weakAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc")),
+            new FrameCaptureResult(weakAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc"))
+        ]);
+
+        var service = new CaptureService(
+            new StaticDeviceDiscovery([
+                new CameraDeviceInfo("cam-fail", "Fail Cam", true, null)
+            ]),
+            new RecordingModeProvider([
+                new CameraCaptureMode(1280, 720, 30, "YUY2")
+            ]),
+            sequenceProvider);
+
+        var result = await service.CaptureAsync(
+            new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "cam-fail", "reliability-test"),
+            new CaptureSettings(3, true, true, "grid", "diffuse", MinimumAcceptedFrameCount: 3, MaxCaptureAttempts: 2));
+
+        Assert.False(result.ReliabilityTargetMet);
+        Assert.Equal(2, result.CaptureAttemptsUsed);
+        Assert.Equal(2, sequenceProvider.Calls);
+        Assert.Contains("after 2/2", result.ReliabilityFailureReason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -183,6 +267,34 @@ public class CaptureServiceTests
                     ExposureLockVerified: true,
                     WhiteBalanceLockVerified: true,
                     TimestampSource: "system_clock_utc")));
+        }
+    }
+
+    private sealed class SequenceFrameProvider : IFrameCaptureProvider
+    {
+        private readonly Queue<FrameCaptureResult> _results;
+
+        public SequenceFrameProvider(IReadOnlyList<FrameCaptureResult> results)
+        {
+            _results = new Queue<FrameCaptureResult>(results);
+        }
+
+        public int Calls { get; private set; }
+
+        public Task<FrameCaptureResult> CaptureFramesAsync(
+            string cameraDeviceId,
+            CaptureSettings settings,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            if (_results.Count == 0)
+            {
+                return Task.FromResult(new FrameCaptureResult(
+                    Frames: [],
+                    Diagnostics: new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc")));
+            }
+
+            return Task.FromResult(_results.Dequeue());
         }
     }
 }

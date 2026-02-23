@@ -45,6 +45,12 @@ public sealed class CaptureQualityAnalyzer
             reliabilityWarnings.Add("Frame timestamps are not monotonic.");
         }
 
+        if (!captureResult.ReliabilityTargetMet)
+        {
+            reliabilityWarnings.Add(captureResult.ReliabilityFailureReason
+                                    ?? "Capture reliability target was not met.");
+        }
+
         var reliabilityPass = reliabilityWarnings.Count == 0;
 
         var summary = acceptedRatio >= 0.8

@@ -29,6 +29,7 @@ Detailed setup and contribution instructions will be expanded as implementation 
 - `AGENTS.md`
 - `docs/requirements.md`
 - `docs/real-camera-smoke-test.md`
+- `docs/remaining-development.md`
 
 ## Testing with a Real USB Camera (Phase 1)
 1. Connect a USB camera to Windows.

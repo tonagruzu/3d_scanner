@@ -46,29 +46,75 @@ public sealed class CaptureService : ICaptureService
                            ?? supportedModes.FirstOrDefault()
                            ?? new CameraCaptureMode(1280, 720, 30, "Unknown");
 
-        var frameCaptureResult = await frameProvider.CaptureFramesAsync(selectedDeviceId, settings, cancellationToken);
-        var frames = frameCaptureResult.Frames;
+        var requiredAcceptedFrameCount = Math.Clamp(settings.MinimumAcceptedFrameCount, 1, Math.Max(1, settings.TargetFrameCount));
+        var maxCaptureAttempts = Math.Max(1, settings.MaxCaptureAttempts);
 
-        if (!settings.AllowMockFallback && string.Equals(frameCaptureResult.Diagnostics.BackendUsed, "mock", StringComparison.OrdinalIgnoreCase))
+        FrameCaptureResult? bestFrameCaptureResult = null;
+        var bestAcceptedFrameCount = -1;
+        var attemptsUsed = 0;
+
+        for (var attempt = 1; attempt <= maxCaptureAttempts; attempt++)
         {
-            throw new InvalidOperationException("Capture provider fell back to mock backend, but mock fallback is disabled for this run.");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var frameCaptureResult = await frameProvider.CaptureFramesAsync(selectedDeviceId, settings, cancellationToken);
+            if (!settings.AllowMockFallback && string.Equals(frameCaptureResult.Diagnostics.BackendUsed, "mock", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Capture provider fell back to mock backend, but mock fallback is disabled for this run.");
+            }
+
+            attemptsUsed = attempt;
+            var acceptedCount = frameCaptureResult.Frames.Count(frame => frame.Accepted);
+            if (acceptedCount > bestAcceptedFrameCount)
+            {
+                bestAcceptedFrameCount = acceptedCount;
+                bestFrameCaptureResult = frameCaptureResult;
+            }
+
+            if (acceptedCount >= requiredAcceptedFrameCount)
+            {
+                break;
+            }
         }
 
+        bestFrameCaptureResult ??= new FrameCaptureResult(
+            Frames: [],
+            Diagnostics: new FrameCaptureDiagnostics(
+                BackendUsed: "unknown",
+                ExposureLockVerified: null,
+                WhiteBalanceLockVerified: null,
+                TimestampSource: "unknown"));
+
+        var frames = bestFrameCaptureResult.Frames;
         var acceptedFrameCount = frames.Count(frame => frame.Accepted);
-        var notes = $"device={selectedDeviceName}; mode={selectedMode}; backend={frameCaptureResult.Diagnostics.BackendUsed}; lockExposure={settings.LockExposure}; exposureLockVerified={frameCaptureResult.Diagnostics.ExposureLockVerified?.ToString() ?? "unknown"}; lockWhiteBalance={settings.LockWhiteBalance}; whiteBalanceLockVerified={frameCaptureResult.Diagnostics.WhiteBalanceLockVerified?.ToString() ?? "unknown"}; timestampSource={frameCaptureResult.Diagnostics.TimestampSource}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
+        var reliabilityTargetMet = acceptedFrameCount >= requiredAcceptedFrameCount;
+        var reliabilityFailureReason = reliabilityTargetMet
+            ? null
+            : $"Accepted frames {acceptedFrameCount}/{requiredAcceptedFrameCount} after {attemptsUsed}/{maxCaptureAttempts} capture attempts.";
+
+        var notes = $"device={selectedDeviceName}; mode={selectedMode}; backend={bestFrameCaptureResult.Diagnostics.BackendUsed}; lockExposure={settings.LockExposure}; exposureLockVerified={bestFrameCaptureResult.Diagnostics.ExposureLockVerified?.ToString() ?? "unknown"}; lockWhiteBalance={settings.LockWhiteBalance}; whiteBalanceLockVerified={bestFrameCaptureResult.Diagnostics.WhiteBalanceLockVerified?.ToString() ?? "unknown"}; timestampSource={bestFrameCaptureResult.Diagnostics.TimestampSource}; minAccepted={requiredAcceptedFrameCount}; attempts={attemptsUsed}/{maxCaptureAttempts}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
+        if (!string.IsNullOrWhiteSpace(reliabilityFailureReason))
+        {
+            notes += $"; reliabilityFailure={reliabilityFailureReason}";
+        }
 
         return new CaptureResult(
             CameraDeviceId: selectedDeviceId,
             SelectedMode: selectedMode,
             CapturedFrameCount: frames.Count,
             AcceptedFrameCount: acceptedFrameCount,
+            RequiredAcceptedFrameCount: requiredAcceptedFrameCount,
+            CaptureAttemptsUsed: attemptsUsed,
+            MaxCaptureAttempts: maxCaptureAttempts,
+            ReliabilityTargetMet: reliabilityTargetMet,
+            ReliabilityFailureReason: reliabilityFailureReason,
             Frames: frames,
-            CaptureBackend: frameCaptureResult.Diagnostics.BackendUsed,
+            CaptureBackend: bestFrameCaptureResult.Diagnostics.BackendUsed,
             ExposureLockRequested: settings.LockExposure,
             WhiteBalanceLockRequested: settings.LockWhiteBalance,
-            ExposureLockVerified: frameCaptureResult.Diagnostics.ExposureLockVerified,
-            WhiteBalanceLockVerified: frameCaptureResult.Diagnostics.WhiteBalanceLockVerified,
-            FrameTimestampSource: frameCaptureResult.Diagnostics.TimestampSource,
+            ExposureLockVerified: bestFrameCaptureResult.Diagnostics.ExposureLockVerified,
+            WhiteBalanceLockVerified: bestFrameCaptureResult.Diagnostics.WhiteBalanceLockVerified,
+            FrameTimestampSource: bestFrameCaptureResult.Diagnostics.TimestampSource,
             FrameTimestampsMonotonic: AreTimestampsMonotonic(frames),
             Notes: notes);
     }
