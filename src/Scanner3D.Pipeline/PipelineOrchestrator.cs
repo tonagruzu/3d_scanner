@@ -62,6 +62,8 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             detectionMode: underlayEstimate.DetectionMode,
             expectedBoxSizeMm: expectedUnderlayBoxSizeMm,
             measuredBoxSizesMm: underlayEstimate.MeasuredBoxSizesMm,
+            scaleConfidence: underlayEstimate.ScaleConfidence,
+            poseQuality: underlayEstimate.PoseQuality,
             toleranceMm: 0.2);
 
         const double toleranceMm = 0.5;

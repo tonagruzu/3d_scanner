@@ -9,5 +9,7 @@ public interface IUnderlayPatternValidator
     string detectionMode,
         double expectedBoxSizeMm,
         IReadOnlyList<double> measuredBoxSizesMm,
+        double? scaleConfidence = null,
+        double? poseQuality = null,
         double toleranceMm = 0.2);
 }

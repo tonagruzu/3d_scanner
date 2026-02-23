@@ -10,5 +10,7 @@ public sealed record UnderlayVerificationResult(
     double MeanBoxSizeMm,
     double MaxAbsoluteErrorMm,
     double FitConfidence,
+    double ScaleConfidence,
+    double PoseQuality,
     bool Pass,
     string Notes);

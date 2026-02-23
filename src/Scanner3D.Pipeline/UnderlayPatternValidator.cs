@@ -10,6 +10,8 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
         string detectionMode,
         double expectedBoxSizeMm,
         IReadOnlyList<double> measuredBoxSizesMm,
+        double? scaleConfidence = null,
+        double? poseQuality = null,
         double toleranceMm = 0.2)
     {
         if (measuredBoxSizesMm.Count == 0)
@@ -24,6 +26,8 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
                 MeanBoxSizeMm: 0,
                 MaxAbsoluteErrorMm: double.MaxValue,
                 FitConfidence: 0,
+                ScaleConfidence: 0,
+                PoseQuality: 0,
                 Pass: false,
                 Notes: "No measured underlay boxes provided.");
         }
@@ -34,6 +38,8 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
         var mean = valuesForScoring.Average();
         var maxAbsError = valuesForScoring.Max(value => Math.Abs(value - expectedBoxSizeMm));
         var fitConfidence = ComputeFitConfidence(measuredBoxSizesMm, valuesForScoring, expectedBoxSizeMm, toleranceMm);
+        var resolvedScaleConfidence = Math.Round(Math.Clamp(scaleConfidence ?? fitConfidence, 0.0, 1.0), 3);
+        var resolvedPoseQuality = Math.Round(Math.Clamp(poseQuality ?? (fitConfidence * 0.95), 0.0, 1.0), 3);
         var pass = maxAbsError <= toleranceMm;
 
         return new UnderlayVerificationResult(
@@ -46,6 +52,8 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
             MeanBoxSizeMm: mean,
             MaxAbsoluteErrorMm: maxAbsError,
             FitConfidence: fitConfidence,
+            ScaleConfidence: resolvedScaleConfidence,
+            PoseQuality: resolvedPoseQuality,
             Pass: pass,
             Notes: pass
                 ? "Underlay print scale verification passed."

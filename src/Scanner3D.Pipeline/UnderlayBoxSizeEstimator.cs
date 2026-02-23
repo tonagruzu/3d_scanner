@@ -13,23 +13,33 @@ public sealed class UnderlayBoxSizeEstimator
         var fromPreviews = EstimateFromPreviewImages(capture, expectedBoxSizeMm, targetSamples).ToList();
         if (fromPreviews.Count >= 3)
         {
-            return new UnderlayBoxSizeEstimate(fromPreviews, "preview-image");
+            return new UnderlayBoxSizeEstimate(
+                MeasuredBoxSizesMm: fromPreviews.Select(item => item.MeasuredBoxSizeMm).ToList(),
+                DetectionMode: "preview-image",
+                ScaleConfidence: Math.Round(Math.Clamp(fromPreviews.Average(item => item.ScaleConfidence), 0.0, 1.0), 3),
+                PoseQuality: Math.Round(Math.Clamp(fromPreviews.Average(item => item.PoseQuality), 0.0, 1.0), 3));
         }
 
         var fromFrameQuality = EstimateFromFrameQuality(capture, expectedBoxSizeMm, targetSamples).ToList();
         if (fromFrameQuality.Count >= 3)
         {
-            return new UnderlayBoxSizeEstimate(fromFrameQuality, "frame-quality-fallback");
+            return new UnderlayBoxSizeEstimate(
+                MeasuredBoxSizesMm: fromFrameQuality.Select(item => item.MeasuredBoxSizeMm).ToList(),
+                DetectionMode: "frame-quality-fallback",
+                ScaleConfidence: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.ScaleConfidence), 0.0, 1.0), 3),
+                PoseQuality: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.PoseQuality), 0.0, 1.0), 3));
         }
 
         return new UnderlayBoxSizeEstimate(
-            [expectedBoxSizeMm - 0.04, expectedBoxSizeMm + 0.04, expectedBoxSizeMm + 0.02],
-            "static-fallback");
+            MeasuredBoxSizesMm: [expectedBoxSizeMm - 0.04, expectedBoxSizeMm + 0.04, expectedBoxSizeMm + 0.02],
+            DetectionMode: "static-fallback",
+            ScaleConfidence: 0.25,
+            PoseQuality: 0.20);
     }
 
-    private static IReadOnlyList<double> EstimateFromPreviewImages(CaptureResult capture, double expectedBoxSizeMm, int targetSamples)
+    private static IReadOnlyList<PreviewUnderlayEstimate> EstimateFromPreviewImages(CaptureResult capture, double expectedBoxSizeMm, int targetSamples)
     {
-        var measured = new List<double>();
+        var measured = new List<PreviewUnderlayEstimate>();
 
         foreach (var frame in capture.Frames.Where(frame => frame.Accepted))
         {
@@ -39,9 +49,9 @@ public sealed class UnderlayBoxSizeEstimator
             }
 
             var value = TryEstimateFromSinglePreview(frame.PreviewImagePath, expectedBoxSizeMm);
-            if (value.HasValue)
+            if (value is not null)
             {
-                measured.Add(value.Value);
+                measured.Add(value);
                 if (measured.Count >= targetSamples)
                 {
                     break;
@@ -52,7 +62,7 @@ public sealed class UnderlayBoxSizeEstimator
         return measured;
     }
 
-    private static double? TryEstimateFromSinglePreview(string previewPath, double expectedBoxSizeMm)
+    private static PreviewUnderlayEstimate? TryEstimateFromSinglePreview(string previewPath, double expectedBoxSizeMm)
     {
         try
         {
@@ -112,9 +122,22 @@ public sealed class UnderlayBoxSizeEstimator
             }
 
             var averageSpacing = spacingValues.Average();
+            var spacingSpread = spacingValues.Count > 1
+                ? Math.Sqrt(spacingValues.Average(value => Math.Pow(value - averageSpacing, 2)))
+                : 0;
+
             var regularity = Math.Clamp(1.0 / (1.0 + Math.Abs(averageSpacing - 40.0) / 30.0), 0.0, 1.0);
             var adjustment = (regularity - 0.75) * 0.18;
-            return Math.Round(Math.Clamp(expectedBoxSizeMm + adjustment, expectedBoxSizeMm - 0.18, expectedBoxSizeMm + 0.18), 3);
+            var measuredBoxSize = Math.Round(Math.Clamp(expectedBoxSizeMm + adjustment, expectedBoxSizeMm - 0.18, expectedBoxSizeMm + 0.18), 3);
+
+            var axisCoverage = spacingValues.Count == 2 ? 1.0 : 0.82;
+            var scaleConfidence = Math.Clamp((regularity * 0.75) + (axisCoverage * 0.25), 0.0, 1.0);
+            var poseQuality = Math.Clamp((1.0 / (1.0 + (spacingSpread / 6.0))) * axisCoverage, 0.0, 1.0);
+
+            return new PreviewUnderlayEstimate(
+                MeasuredBoxSizeMm: measuredBoxSize,
+                ScaleConfidence: Math.Round(scaleConfidence, 3),
+                PoseQuality: Math.Round(poseQuality, 3));
         }
         catch
         {
@@ -122,15 +145,23 @@ public sealed class UnderlayBoxSizeEstimator
         }
     }
 
-    private static IEnumerable<double> EstimateFromFrameQuality(CaptureResult capture, double expectedBoxSizeMm, int targetSamples)
+    private static IEnumerable<PreviewUnderlayEstimate> EstimateFromFrameQuality(CaptureResult capture, double expectedBoxSizeMm, int targetSamples)
     {
-        var measured = new List<double>();
+        var measured = new List<PreviewUnderlayEstimate>();
         foreach (var frame in capture.Frames.Where(frame => frame.Accepted))
         {
             var sharpnessBias = (0.9 - frame.SharpnessScore) * 0.12;
             var exposureBias = (0.5 - frame.ExposureScore) * 0.06;
             var candidate = expectedBoxSizeMm + sharpnessBias + exposureBias;
-            measured.Add(Math.Round(Math.Clamp(candidate, expectedBoxSizeMm - 0.16, expectedBoxSizeMm + 0.16), 3));
+            var measuredSize = Math.Round(Math.Clamp(candidate, expectedBoxSizeMm - 0.16, expectedBoxSizeMm + 0.16), 3);
+
+            var scaleConfidence = Math.Clamp((frame.SharpnessScore * 0.65) + (frame.ExposureScore * 0.35), 0.0, 1.0);
+            var poseQuality = Math.Clamp((frame.SharpnessScore * 0.55) + (frame.ExposureScore * 0.25), 0.0, 1.0);
+
+            measured.Add(new PreviewUnderlayEstimate(
+                MeasuredBoxSizeMm: measuredSize,
+                ScaleConfidence: Math.Round(scaleConfidence, 3),
+                PoseQuality: Math.Round(poseQuality, 3)));
 
             if (measured.Count >= targetSamples)
             {
@@ -201,4 +232,11 @@ public sealed class UnderlayBoxSizeEstimator
 
 public sealed record UnderlayBoxSizeEstimate(
     IReadOnlyList<double> MeasuredBoxSizesMm,
-    string DetectionMode);
+    string DetectionMode,
+    double ScaleConfidence,
+    double PoseQuality);
+
+public sealed record PreviewUnderlayEstimate(
+    double MeasuredBoxSizeMm,
+    double ScaleConfidence,
+    double PoseQuality);

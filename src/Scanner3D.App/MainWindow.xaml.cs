@@ -13,7 +13,7 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
-    private const string GuiVersion = "v1.8.0";
+    private const string GuiVersion = "v1.9.0";
 
     private sealed record CameraOption(string DeviceId, string DisplayName)
     {
@@ -384,6 +384,8 @@ public partial class MainWindow : Window
         builder.AppendLine($"- Expected box size (mm): {result.UnderlayVerification.ExpectedBoxSizeMm:0.###}");
         builder.AppendLine($"- Inlier samples: {result.UnderlayVerification.InlierBoxSizesMm.Count}/{result.UnderlayVerification.MeasuredBoxSizesMm.Count}");
         builder.AppendLine($"- Fit confidence: {result.UnderlayVerification.FitConfidence:0.###}");
+        builder.AppendLine($"- Scale confidence: {result.UnderlayVerification.ScaleConfidence:0.###}");
+        builder.AppendLine($"- Pose quality: {result.UnderlayVerification.PoseQuality:0.###}");
         builder.AppendLine($"- Max box error (mm): {result.UnderlayVerification.MaxAbsoluteErrorMm:0.###}");
         builder.AppendLine();
 
@@ -441,7 +443,7 @@ public partial class MainWindow : Window
 
     private static string BuildUnderlayUiSummary(UnderlayVerificationResult underlay)
     {
-        return $"mode={underlay.DetectionMode} | fit={underlay.FitConfidence:0.###} | inliers={underlay.InlierBoxSizesMm.Count}/{underlay.MeasuredBoxSizesMm.Count} | maxErr={underlay.MaxAbsoluteErrorMm:0.###} mm";
+        return $"mode={underlay.DetectionMode} | fit={underlay.FitConfidence:0.###} | scale={underlay.ScaleConfidence:0.###} | pose={underlay.PoseQuality:0.###} | inliers={underlay.InlierBoxSizesMm.Count}/{underlay.MeasuredBoxSizesMm.Count} | maxErr={underlay.MaxAbsoluteErrorMm:0.###} mm";
     }
 
     private void DisplayFramePreview(CaptureResult capture)

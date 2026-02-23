@@ -19,6 +19,8 @@ public class UnderlayPatternValidatorTests
         Assert.True(result.InlierBoxSizesMm.Count < result.MeasuredBoxSizesMm.Count);
         Assert.DoesNotContain(result.InlierBoxSizesMm, value => value > 10.5);
         Assert.InRange(result.FitConfidence, 0.0, 1.0);
+        Assert.InRange(result.ScaleConfidence, 0.0, 1.0);
+        Assert.InRange(result.PoseQuality, 0.0, 1.0);
         Assert.True(result.FitConfidence > 0.6);
     }
 
@@ -33,6 +35,8 @@ public class UnderlayPatternValidatorTests
         Assert.False(result.Pass);
         Assert.Equal("static-fallback", result.DetectionMode);
         Assert.Equal(0.0, result.FitConfidence);
+        Assert.Equal(0.0, result.ScaleConfidence);
+        Assert.Equal(0.0, result.PoseQuality);
         Assert.Empty(result.InlierBoxSizesMm);
     }
 }

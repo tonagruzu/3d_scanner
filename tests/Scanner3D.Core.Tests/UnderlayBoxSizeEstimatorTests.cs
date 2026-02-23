@@ -25,6 +25,8 @@ public class UnderlayBoxSizeEstimatorTests
             Assert.Equal("preview-image", estimate.DetectionMode);
             Assert.True(estimate.MeasuredBoxSizesMm.Count >= 3);
             Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.82, 10.18));
+            Assert.InRange(estimate.ScaleConfidence, 0.0, 1.0);
+            Assert.InRange(estimate.PoseQuality, 0.0, 1.0);
         }
         finally
         {
@@ -49,6 +51,8 @@ public class UnderlayBoxSizeEstimatorTests
         Assert.Equal("frame-quality-fallback", estimate.DetectionMode);
         Assert.True(estimate.MeasuredBoxSizesMm.Count >= 3);
         Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.84, 10.16));
+        Assert.InRange(estimate.ScaleConfidence, 0.0, 1.0);
+        Assert.InRange(estimate.PoseQuality, 0.0, 1.0);
     }
 
     private static string CreateGridPreviewImage()
