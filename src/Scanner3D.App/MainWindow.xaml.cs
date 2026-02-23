@@ -32,6 +32,8 @@ public partial class MainWindow : Window
     private readonly string _previewDirectory = Path.Combine(Path.GetTempPath(), "scanner3d-preview");
     private DispatcherTimer? _livePreviewTimer;
     private string? _lastLivePreviewPath;
+    private DateTimeOffset? _lastLivePreviewTimestamp;
+    private DateTimeOffset? _previousLivePreviewTimestamp;
 
     public MainWindow()
     {
@@ -434,6 +436,8 @@ public partial class MainWindow : Window
     private void StartLivePreviewPolling()
     {
         _lastLivePreviewPath = null;
+        _lastLivePreviewTimestamp = null;
+        _previousLivePreviewTimestamp = null;
 
         _livePreviewTimer ??= new DispatcherTimer
         {
@@ -474,11 +478,12 @@ public partial class MainWindow : Window
                 .EnumerateFiles(_previewDirectory, "*.jpg", SearchOption.TopDirectoryOnly)
                 .Select(path => new FileInfo(path))
                 .OrderByDescending(file => file.LastWriteTimeUtc)
-                .Select(file => file.FullName)
+                .Select(file => new { file.FullName, file.LastWriteTimeUtc })
                 .FirstOrDefault();
 
-            if (string.IsNullOrWhiteSpace(latestPreviewPath)
-                || string.Equals(latestPreviewPath, _lastLivePreviewPath, StringComparison.OrdinalIgnoreCase))
+            if (latestPreviewPath is null
+                || string.IsNullOrWhiteSpace(latestPreviewPath.FullName)
+                || string.Equals(latestPreviewPath.FullName, _lastLivePreviewPath, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -486,14 +491,27 @@ public partial class MainWindow : Window
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(latestPreviewPath, UriKind.Absolute);
+            bitmap.UriSource = new Uri(latestPreviewPath.FullName, UriKind.Absolute);
             bitmap.EndInit();
             bitmap.Freeze();
 
             FramePreviewImage.Source = bitmap;
             FramePreviewPlaceholderTextBlock.Visibility = Visibility.Collapsed;
-            FramePreviewStatusTextBlock.Text = "Live preview (capturing)...";
-            _lastLivePreviewPath = latestPreviewPath;
+            var now = DateTimeOffset.UtcNow;
+            _previousLivePreviewTimestamp = _lastLivePreviewTimestamp;
+            _lastLivePreviewTimestamp = now;
+
+            var frameWriteTime = new DateTimeOffset(DateTime.SpecifyKind(latestPreviewPath.LastWriteTimeUtc, DateTimeKind.Utc));
+            var age = DateTimeOffset.UtcNow - frameWriteTime;
+            var fpsText = "n/a";
+            if (_previousLivePreviewTimestamp.HasValue)
+            {
+                var deltaSeconds = Math.Max(0.001, (_lastLivePreviewTimestamp.Value - _previousLivePreviewTimestamp.Value).TotalSeconds);
+                fpsText = $"{(1.0 / deltaSeconds):0.0}";
+            }
+
+            FramePreviewStatusTextBlock.Text = $"Live preview | age={age.TotalMilliseconds:0} ms | update~{fpsText} fps";
+            _lastLivePreviewPath = latestPreviewPath.FullName;
         }
         catch
         {
