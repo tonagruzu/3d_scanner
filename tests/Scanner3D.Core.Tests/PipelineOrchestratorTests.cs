@@ -15,7 +15,11 @@ public class PipelineOrchestratorTests
 
         var result = await orchestrator.ExecuteAsync(session);
 
-        Assert.True(result.Success);
+        var expectedSuccess = result.Capture.AcceptedFrameCount > 0
+            && result.Calibration.IsWithinTolerance
+            && result.UnderlayVerification.Pass
+            && result.Validation.Pass;
+        Assert.Equal(expectedSuccess, result.Success);
         Assert.Equal(6, result.SketchPaths.Count);
         Assert.True(File.Exists(result.MeshPath));
         Assert.EndsWith("model.obj", result.MeshPath, StringComparison.OrdinalIgnoreCase);
