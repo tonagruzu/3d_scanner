@@ -20,10 +20,11 @@ public class UnderlayBoxSizeEstimatorTests
                 new CaptureFrame("f-002", DateTimeOffset.UtcNow, 200, 0.90, 0.82, true, previewPath),
                 new CaptureFrame("f-003", DateTimeOffset.UtcNow, 300, 0.91, 0.85, true, previewPath));
 
-            var measured = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, targetSamples: 5);
+            var estimate = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, targetSamples: 5);
 
-            Assert.True(measured.Count >= 3);
-            Assert.All(measured, value => Assert.InRange(value, 9.82, 10.18));
+            Assert.Equal("preview-image", estimate.DetectionMode);
+            Assert.True(estimate.MeasuredBoxSizesMm.Count >= 3);
+            Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.82, 10.18));
         }
         finally
         {
@@ -43,10 +44,11 @@ public class UnderlayBoxSizeEstimatorTests
             new CaptureFrame("f-002", DateTimeOffset.UtcNow, 200, 0.86, 0.79, true),
             new CaptureFrame("f-003", DateTimeOffset.UtcNow, 300, 0.87, 0.81, true));
 
-        var measured = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, targetSamples: 5);
+        var estimate = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, targetSamples: 5);
 
-        Assert.True(measured.Count >= 3);
-        Assert.All(measured, value => Assert.InRange(value, 9.84, 10.16));
+        Assert.Equal("frame-quality-fallback", estimate.DetectionMode);
+        Assert.True(estimate.MeasuredBoxSizesMm.Count >= 3);
+        Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.84, 10.16));
     }
 
     private static string CreateGridPreviewImage()

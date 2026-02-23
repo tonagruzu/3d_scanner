@@ -5,7 +5,7 @@ namespace Scanner3D.Pipeline;
 
 public sealed class UnderlayBoxSizeEstimator
 {
-    public IReadOnlyList<double> EstimateMeasuredBoxSizesMm(
+    public UnderlayBoxSizeEstimate EstimateMeasuredBoxSizesMm(
         CaptureResult capture,
         double expectedBoxSizeMm,
         int targetSamples = 5)
@@ -13,16 +13,18 @@ public sealed class UnderlayBoxSizeEstimator
         var fromPreviews = EstimateFromPreviewImages(capture, expectedBoxSizeMm, targetSamples).ToList();
         if (fromPreviews.Count >= 3)
         {
-            return fromPreviews;
+            return new UnderlayBoxSizeEstimate(fromPreviews, "preview-image");
         }
 
         var fromFrameQuality = EstimateFromFrameQuality(capture, expectedBoxSizeMm, targetSamples).ToList();
         if (fromFrameQuality.Count >= 3)
         {
-            return fromFrameQuality;
+            return new UnderlayBoxSizeEstimate(fromFrameQuality, "frame-quality-fallback");
         }
 
-        return [expectedBoxSizeMm - 0.04, expectedBoxSizeMm + 0.04, expectedBoxSizeMm + 0.02];
+        return new UnderlayBoxSizeEstimate(
+            [expectedBoxSizeMm - 0.04, expectedBoxSizeMm + 0.04, expectedBoxSizeMm + 0.02],
+            "static-fallback");
     }
 
     private static IReadOnlyList<double> EstimateFromPreviewImages(CaptureResult capture, double expectedBoxSizeMm, int targetSamples)
@@ -196,3 +198,7 @@ public sealed class UnderlayBoxSizeEstimator
         return clustered;
     }
 }
+
+public sealed record UnderlayBoxSizeEstimate(
+    IReadOnlyList<double> MeasuredBoxSizesMm,
+    string DetectionMode);

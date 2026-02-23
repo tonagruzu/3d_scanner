@@ -6,6 +6,7 @@ public interface IUnderlayPatternValidator
 {
     UnderlayVerificationResult Validate(
         string underlayPatternId,
+    string detectionMode,
         double expectedBoxSizeMm,
         IReadOnlyList<double> measuredBoxSizesMm,
         double toleranceMm = 0.2);

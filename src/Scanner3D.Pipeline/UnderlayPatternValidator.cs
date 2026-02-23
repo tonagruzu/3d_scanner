@@ -7,6 +7,7 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
 {
     public UnderlayVerificationResult Validate(
         string underlayPatternId,
+        string detectionMode,
         double expectedBoxSizeMm,
         IReadOnlyList<double> measuredBoxSizesMm,
         double toleranceMm = 0.2)
@@ -16,6 +17,7 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
             return new UnderlayVerificationResult(
                 Performed: false,
                 UnderlayPatternId: underlayPatternId,
+                DetectionMode: detectionMode,
                 ExpectedBoxSizeMm: expectedBoxSizeMm,
                 MeasuredBoxSizesMm: measuredBoxSizesMm,
                 InlierBoxSizesMm: [],
@@ -37,6 +39,7 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
         return new UnderlayVerificationResult(
             Performed: true,
             UnderlayPatternId: underlayPatternId,
+            DetectionMode: detectionMode,
             ExpectedBoxSizeMm: expectedBoxSizeMm,
             MeasuredBoxSizesMm: measuredBoxSizesMm,
             InlierBoxSizesMm: valuesForScoring.ToList(),
