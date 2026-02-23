@@ -32,6 +32,7 @@ public partial class MainWindow : Window
             ArtifactListBox.Items.Clear();
             OpenOutputButton.IsEnabled = false;
             CopySummaryButton.IsEnabled = false;
+            ExportSummaryButton.IsEnabled = false;
             _latestResult = null;
             _latestOutputDirectory = null;
 
@@ -134,6 +135,7 @@ public partial class MainWindow : Window
         OpenOutputButton.IsEnabled = !string.IsNullOrWhiteSpace(_latestOutputDirectory)
                                     && Directory.Exists(_latestOutputDirectory);
         CopySummaryButton.IsEnabled = true;
+        ExportSummaryButton.IsEnabled = OpenOutputButton.IsEnabled;
     }
 
     private void CopyRunSummary_Click(object sender, RoutedEventArgs e)
@@ -200,5 +202,27 @@ public partial class MainWindow : Window
 
         _latestResult = entry.Result;
         DisplayResult(entry.Result);
+    }
+
+    private void ExportRunSummary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_latestResult is null)
+        {
+            MessageBox.Show("No run summary is available yet. Run the pipeline first.", "Export Run Summary", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_latestOutputDirectory) || !Directory.Exists(_latestOutputDirectory))
+        {
+            MessageBox.Show("No output folder is available for export.", "Export Run Summary", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var summary = BuildRunSummary(_latestResult);
+        var fileName = $"run-summary-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.txt";
+        var filePath = Path.Combine(_latestOutputDirectory, fileName);
+
+        File.WriteAllText(filePath, summary, Encoding.UTF8);
+        MessageBox.Show($"Run summary exported to:\n{filePath}", "Export Run Summary", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }
