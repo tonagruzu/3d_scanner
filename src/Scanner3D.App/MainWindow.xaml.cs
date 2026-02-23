@@ -14,6 +14,7 @@ public partial class MainWindow : Window
 
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
     private readonly List<RunHistoryEntry> _runHistory = [];
+    private bool _isRunning;
     private PipelineResult? _latestResult;
     private string? _latestSummaryFilePath;
     private string? _latestOutputDirectory;
@@ -22,22 +23,28 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _pipelineOrchestrator = new Scanner3D.Pipeline.PipelineOrchestrator();
+        UpdateActionStates();
     }
 
     private async void RunPipelineStub_Click(object sender, RoutedEventArgs e)
     {
+        if (_isRunning)
+        {
+            return;
+        }
+
+        _isRunning = true;
+        UpdateActionStates();
+
         try
         {
             StatusTextBlock.Text = "Running pipeline...";
             ValidationSummaryTextBlock.Text = "Processing";
             ArtifactListBox.Items.Clear();
-            OpenOutputButton.IsEnabled = false;
-            CopySummaryButton.IsEnabled = false;
-            ExportSummaryButton.IsEnabled = false;
-            OpenSummaryButton.IsEnabled = false;
             _latestResult = null;
             _latestSummaryFilePath = null;
             _latestOutputDirectory = null;
+            UpdateActionStates();
 
             var session = new ScanSession(
                 SessionId: Guid.NewGuid(),
@@ -60,6 +67,11 @@ public partial class MainWindow : Window
             StatusTextBlock.Text = "Execution failed";
             ValidationSummaryTextBlock.Text = exception.Message;
             MessageBox.Show(exception.Message, "Pipeline Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isRunning = false;
+            UpdateActionStates();
         }
     }
 
@@ -135,10 +147,7 @@ public partial class MainWindow : Window
         }
 
         _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
-        OpenOutputButton.IsEnabled = !string.IsNullOrWhiteSpace(_latestOutputDirectory)
-                                    && Directory.Exists(_latestOutputDirectory);
-        CopySummaryButton.IsEnabled = true;
-        ExportSummaryButton.IsEnabled = OpenOutputButton.IsEnabled;
+        UpdateActionStates();
     }
 
     private void CopyRunSummary_Click(object sender, RoutedEventArgs e)
@@ -227,7 +236,7 @@ public partial class MainWindow : Window
 
         File.WriteAllText(filePath, summary, Encoding.UTF8);
         _latestSummaryFilePath = filePath;
-        OpenSummaryButton.IsEnabled = File.Exists(_latestSummaryFilePath);
+        UpdateActionStates();
         MessageBox.Show($"Run summary exported to:\n{filePath}", "Export Run Summary", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -236,7 +245,7 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(_latestSummaryFilePath) || !File.Exists(_latestSummaryFilePath))
         {
             MessageBox.Show("No exported summary file is available yet.", "Open Last Summary File", MessageBoxButton.OK, MessageBoxImage.Information);
-            OpenSummaryButton.IsEnabled = false;
+            UpdateActionStates();
             return;
         }
 
@@ -245,5 +254,20 @@ public partial class MainWindow : Window
             FileName = _latestSummaryFilePath,
             UseShellExecute = true
         });
+    }
+
+    private void UpdateActionStates()
+    {
+        var hasOutputDirectory = !string.IsNullOrWhiteSpace(_latestOutputDirectory) && Directory.Exists(_latestOutputDirectory);
+        var hasResult = _latestResult is not null;
+        var hasSummaryFile = !string.IsNullOrWhiteSpace(_latestSummaryFilePath) && File.Exists(_latestSummaryFilePath);
+
+        RunPipelineButton.IsEnabled = !_isRunning;
+        OpenOutputButton.IsEnabled = !_isRunning && hasOutputDirectory;
+        CopySummaryButton.IsEnabled = !_isRunning && hasResult;
+        ExportSummaryButton.IsEnabled = !_isRunning && hasOutputDirectory && hasResult;
+        OpenSummaryButton.IsEnabled = !_isRunning && hasSummaryFile;
+        RunHistoryListBox.IsEnabled = !_isRunning;
+        ArtifactListBox.IsEnabled = !_isRunning;
     }
 }
