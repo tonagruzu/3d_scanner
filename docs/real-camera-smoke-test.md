@@ -64,6 +64,11 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `underlayVerification.inlierBoxSizesMm` has at least `3` values.
 - `underlayVerification.fitConfidence` is in range `[0,1]` (higher is better fit confidence).
 - `underlayVerification.detectionMode` is one of `preview-image`, `frame-quality-fallback`, or `static-fallback`.
+- `underlayVerification.gridSpacingPx >= 0`.
+- `underlayVerification.gridSpacingStdDevPx >= 0`.
+- `underlayVerification.homographyInlierRatio` is in range `[0,1]`.
+- `underlayVerification.poseReprojectionErrorPx >= 0`.
+- `underlayVerification.geometryDerived` is `true` when geometry-driven checkerboard path was used.
 - `underlayVerification.expectedBoxSizeMm` is `10.0`.
 - `underlayVerification.maxAbsoluteErrorMm <= 0.2` for a normal pass run.
 
@@ -98,6 +103,11 @@ $j = Get-Content "<path>" -Raw | ConvertFrom-Json
 "UnderlayInlierSamples={0}" -f $j.underlayVerification.inlierBoxSizesMm.Count
 "UnderlayFitConfidence={0}" -f $j.underlayVerification.fitConfidence
 "UnderlayDetectionMode={0}" -f $j.underlayVerification.detectionMode
+"UnderlayGridSpacingPx={0}" -f $j.underlayVerification.gridSpacingPx
+"UnderlayGridSpacingStdDevPx={0}" -f $j.underlayVerification.gridSpacingStdDevPx
+"UnderlayHomographyInlierRatio={0}" -f $j.underlayVerification.homographyInlierRatio
+"UnderlayPoseReprojectionErrorPx={0}" -f $j.underlayVerification.poseReprojectionErrorPx
+"UnderlayGeometryDerived={0}" -f $j.underlayVerification.geometryDerived
 "UnderlayExpected={0}" -f $j.underlayVerification.expectedBoxSizeMm
 "UnderlayMaxError={0}" -f $j.underlayVerification.maxAbsoluteErrorMm
 ```

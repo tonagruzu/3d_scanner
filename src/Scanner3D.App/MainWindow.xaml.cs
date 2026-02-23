@@ -13,7 +13,7 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
-    private const string GuiVersion = "v2.1.0";
+    private const string GuiVersion = "v2.2.0";
 
     private sealed record CameraOption(string DeviceId, string DisplayName)
     {
@@ -403,6 +403,10 @@ public partial class MainWindow : Window
         builder.AppendLine($"- Fit confidence: {result.UnderlayVerification.FitConfidence:0.###}");
         builder.AppendLine($"- Scale confidence: {result.UnderlayVerification.ScaleConfidence:0.###}");
         builder.AppendLine($"- Pose quality: {result.UnderlayVerification.PoseQuality:0.###}");
+        builder.AppendLine($"- Geometry derived: {result.UnderlayVerification.GeometryDerived}");
+        builder.AppendLine($"- Grid spacing (px): {result.UnderlayVerification.GridSpacingPx:0.###} ± {result.UnderlayVerification.GridSpacingStdDevPx:0.###}");
+        builder.AppendLine($"- Homography inlier ratio: {result.UnderlayVerification.HomographyInlierRatio:0.###}");
+        builder.AppendLine($"- Pose reprojection error (px): {result.UnderlayVerification.PoseReprojectionErrorPx:0.###}");
         builder.AppendLine($"- Max box error (mm): {result.UnderlayVerification.MaxAbsoluteErrorMm:0.###}");
         builder.AppendLine();
 
@@ -472,7 +476,7 @@ public partial class MainWindow : Window
 
     private static string BuildUnderlayUiSummary(UnderlayVerificationResult underlay)
     {
-        return $"mode={underlay.DetectionMode} | fit={underlay.FitConfidence:0.###} | scale={underlay.ScaleConfidence:0.###} | pose={underlay.PoseQuality:0.###} | inliers={underlay.InlierBoxSizesMm.Count}/{underlay.MeasuredBoxSizesMm.Count} | maxErr={underlay.MaxAbsoluteErrorMm:0.###} mm";
+        return $"mode={underlay.DetectionMode} | geom={(underlay.GeometryDerived ? "yes" : "no")} | fit={underlay.FitConfidence:0.###} | scale={underlay.ScaleConfidence:0.###} | pose={underlay.PoseQuality:0.###} | spacingPx={underlay.GridSpacingPx:0.###}±{underlay.GridSpacingStdDevPx:0.###} | inliers={underlay.InlierBoxSizesMm.Count}/{underlay.MeasuredBoxSizesMm.Count} | maxErr={underlay.MaxAbsoluteErrorMm:0.###} mm";
     }
 
     private void DisplayFramePreview(CaptureResult capture)

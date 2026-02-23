@@ -58,6 +58,11 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             measuredBoxSizesMm: underlayEstimate.MeasuredBoxSizesMm,
             scaleConfidence: underlayEstimate.ScaleConfidence,
             poseQuality: underlayEstimate.PoseQuality,
+            gridSpacingPx: underlayEstimate.GridSpacingPx,
+            gridSpacingStdDevPx: underlayEstimate.GridSpacingStdDevPx,
+            homographyInlierRatio: underlayEstimate.HomographyInlierRatio,
+            poseReprojectionErrorPx: underlayEstimate.PoseReprojectionErrorPx,
+            geometryDerived: underlayEstimate.GeometryDerived,
             toleranceMm: 0.2);
 
         var usedIntrinsicFrames = calibration.IntrinsicCalibration?.UsedFrameIds.Count ?? 0;

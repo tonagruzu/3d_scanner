@@ -27,6 +27,8 @@ public class UnderlayBoxSizeEstimatorTests
             Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.82, 10.18));
             Assert.InRange(estimate.ScaleConfidence, 0.0, 1.0);
             Assert.InRange(estimate.PoseQuality, 0.0, 1.0);
+            Assert.False(estimate.GeometryDerived);
+            Assert.True(estimate.GridSpacingPx >= 0.0);
         }
         finally
         {
@@ -53,6 +55,8 @@ public class UnderlayBoxSizeEstimatorTests
         Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.84, 10.16));
         Assert.InRange(estimate.ScaleConfidence, 0.0, 1.0);
         Assert.InRange(estimate.PoseQuality, 0.0, 1.0);
+        Assert.False(estimate.GeometryDerived);
+        Assert.Equal(0.0, estimate.GridSpacingPx);
     }
 
     [Fact]
@@ -100,6 +104,9 @@ public class UnderlayBoxSizeEstimatorTests
             Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.78, 10.22));
             Assert.InRange(estimate.ScaleConfidence, 0.65, 1.0);
             Assert.InRange(estimate.PoseQuality, 0.60, 1.0);
+            Assert.True(estimate.GeometryDerived);
+            Assert.True(estimate.GridSpacingPx > 0.0);
+            Assert.InRange(estimate.HomographyInlierRatio, 0.0, 1.0);
         }
         finally
         {

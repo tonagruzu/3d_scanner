@@ -18,7 +18,12 @@ public sealed class UnderlayBoxSizeEstimator
                 MeasuredBoxSizesMm: fromPreviews.Select(item => item.MeasuredBoxSizeMm).ToList(),
                 DetectionMode: "preview-image",
                 ScaleConfidence: Math.Round(Math.Clamp(fromPreviews.Average(item => item.ScaleConfidence), 0.0, 1.0), 3),
-                PoseQuality: Math.Round(Math.Clamp(fromPreviews.Average(item => item.PoseQuality), 0.0, 1.0), 3));
+                PoseQuality: Math.Round(Math.Clamp(fromPreviews.Average(item => item.PoseQuality), 0.0, 1.0), 3),
+                GridSpacingPx: Math.Round(AverageOrZero(fromPreviews.Select(item => item.GridSpacingPx)), 3),
+                GridSpacingStdDevPx: Math.Round(AverageOrZero(fromPreviews.Select(item => item.GridSpacingStdDevPx)), 3),
+                HomographyInlierRatio: Math.Round(Math.Clamp(AverageOrZero(fromPreviews.Select(item => item.HomographyInlierRatio)), 0.0, 1.0), 3),
+                PoseReprojectionErrorPx: Math.Round(AverageOrZero(fromPreviews.Select(item => item.PoseReprojectionErrorPx)), 3),
+                GeometryDerived: fromPreviews.All(item => item.GeometryDerived));
         }
 
         var fromFrameQuality = EstimateFromFrameQuality(capture, expectedBoxSizeMm, targetSamples).ToList();
@@ -28,14 +33,24 @@ public sealed class UnderlayBoxSizeEstimator
                 MeasuredBoxSizesMm: fromFrameQuality.Select(item => item.MeasuredBoxSizeMm).ToList(),
                 DetectionMode: "frame-quality-fallback",
                 ScaleConfidence: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.ScaleConfidence), 0.0, 1.0), 3),
-                PoseQuality: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.PoseQuality), 0.0, 1.0), 3));
+                PoseQuality: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.PoseQuality), 0.0, 1.0), 3),
+                GridSpacingPx: 0,
+                GridSpacingStdDevPx: 0,
+                HomographyInlierRatio: 0,
+                PoseReprojectionErrorPx: 0,
+                GeometryDerived: false);
         }
 
         return new UnderlayBoxSizeEstimate(
             MeasuredBoxSizesMm: [expectedBoxSizeMm - 0.04, expectedBoxSizeMm + 0.04, expectedBoxSizeMm + 0.02],
             DetectionMode: "static-fallback",
             ScaleConfidence: 0.25,
-            PoseQuality: 0.20);
+            PoseQuality: 0.20,
+            GridSpacingPx: 0,
+            GridSpacingStdDevPx: 0,
+            HomographyInlierRatio: 0,
+            PoseReprojectionErrorPx: 0,
+            GeometryDerived: false);
     }
 
     private static IReadOnlyList<PreviewUnderlayEstimate> EstimateFromPreviewImages(
@@ -153,24 +168,32 @@ public sealed class UnderlayBoxSizeEstimator
 
         var horizontalPxSpacing = CollectPixelSpacing(corners, pattern.Width, pattern.Height, horizontal: true);
         var verticalPxSpacing = CollectPixelSpacing(corners, pattern.Width, pattern.Height, horizontal: false);
+        var combinedPxSpacing = horizontalPxSpacing.Concat(verticalPxSpacing).ToList();
         var meanHorizontalPx = horizontalPxSpacing.Count == 0 ? 0 : horizontalPxSpacing.Average();
         var meanVerticalPx = verticalPxSpacing.Count == 0 ? 0 : verticalPxSpacing.Average();
+        var gridSpacingPx = combinedPxSpacing.Count == 0 ? 0 : combinedPxSpacing.Average();
+        var gridSpacingStdDevPx = StandardDeviation(combinedPxSpacing);
         var anisotropyScore = (meanHorizontalPx > 0 && meanVerticalPx > 0)
             ? Math.Clamp(Math.Min(meanHorizontalPx, meanVerticalPx) / Math.Max(meanHorizontalPx, meanVerticalPx), 0.0, 1.0)
             : 0.6;
 
-        var poseModelScore = TryEstimatePoseScore(corners, pattern, expectedBoxSizeMm, intrinsicCalibration);
+        var poseMetrics = TryEstimatePoseMetrics(corners, pattern, expectedBoxSizeMm, intrinsicCalibration);
         var scaleConfidence = Math.Round(
             Math.Clamp((scaleAccuracyScore * 0.45) + (spacingConsistencyScore * 0.25) + (inlierRatio * 0.30), 0.0, 1.0),
             3);
         var poseQuality = Math.Round(
-            Math.Clamp((anisotropyScore * 0.40) + (spacingConsistencyScore * 0.20) + (poseModelScore * 0.40), 0.0, 1.0),
+            Math.Clamp((anisotropyScore * 0.40) + (spacingConsistencyScore * 0.20) + (poseMetrics.PoseScore * 0.40), 0.0, 1.0),
             3);
 
         return new PreviewUnderlayEstimate(
             MeasuredBoxSizeMm: measuredBoxSizeMm,
             ScaleConfidence: scaleConfidence,
-            PoseQuality: poseQuality);
+            PoseQuality: poseQuality,
+            GridSpacingPx: Math.Round(Math.Max(0.0, gridSpacingPx), 3),
+            GridSpacingStdDevPx: Math.Round(Math.Max(0.0, gridSpacingStdDevPx), 3),
+            HomographyInlierRatio: Math.Round(Math.Clamp(inlierRatio, 0.0, 1.0), 3),
+            PoseReprojectionErrorPx: Math.Round(Math.Max(0.0, poseMetrics.ReprojectionErrorPx), 3),
+            GeometryDerived: true);
     }
 
     private static PreviewUnderlayEstimate? TryEstimateFromLineGridHeuristics(Mat image, double expectedBoxSizeMm)
@@ -240,7 +263,12 @@ public sealed class UnderlayBoxSizeEstimator
         return new PreviewUnderlayEstimate(
             MeasuredBoxSizeMm: measuredBoxSize,
             ScaleConfidence: Math.Round(scaleConfidence, 3),
-            PoseQuality: Math.Round(poseQuality, 3));
+            PoseQuality: Math.Round(poseQuality, 3),
+            GridSpacingPx: Math.Round(Math.Max(0.0, averageSpacing), 3),
+            GridSpacingStdDevPx: Math.Round(Math.Max(0.0, spacingSpread), 3),
+            HomographyInlierRatio: 0,
+            PoseReprojectionErrorPx: 0,
+            GeometryDerived: false);
     }
 
     private static List<Point2f> BuildObjectPoints2D(Size pattern, double squareSizeMm)
@@ -328,7 +356,7 @@ public sealed class UnderlayBoxSizeEstimator
         return spacing;
     }
 
-    private static double TryEstimatePoseScore(
+    private static PoseMetrics TryEstimatePoseMetrics(
         Point2f[] corners,
         Size pattern,
         double squareSizeMm,
@@ -336,7 +364,7 @@ public sealed class UnderlayBoxSizeEstimator
     {
         if (intrinsicCalibration is null || intrinsicCalibration.CameraMatrix.Count != 9)
         {
-            return 0.6;
+            return new PoseMetrics(PoseScore: 0.6, ReprojectionErrorPx: 0);
         }
 
         try
@@ -386,12 +414,19 @@ public sealed class UnderlayBoxSizeEstimator
             var normalZ = Math.Abs(rotation.At<double>(2, 2));
             var frontalScore = Math.Clamp(normalZ, 0.0, 1.0);
             var reprojectionScore = Math.Clamp(1.0 / (1.0 + (rms / 1.5)), 0.0, 1.0);
-            return Math.Clamp((frontalScore * 0.55) + (reprojectionScore * 0.45), 0.0, 1.0);
+            var poseScore = Math.Clamp((frontalScore * 0.55) + (reprojectionScore * 0.45), 0.0, 1.0);
+            return new PoseMetrics(PoseScore: poseScore, ReprojectionErrorPx: rms);
         }
         catch
         {
-            return 0.55;
+            return new PoseMetrics(PoseScore: 0.55, ReprojectionErrorPx: 0);
         }
+    }
+
+    private static double AverageOrZero(IEnumerable<double> values)
+    {
+        var list = values.Where(value => !double.IsNaN(value) && !double.IsInfinity(value)).ToList();
+        return list.Count == 0 ? 0 : list.Average();
     }
 
     private static double ComputeInlierRatio(Mat inlierMask, int total)
@@ -474,7 +509,12 @@ public sealed class UnderlayBoxSizeEstimator
             measured.Add(new PreviewUnderlayEstimate(
                 MeasuredBoxSizeMm: measuredSize,
                 ScaleConfidence: Math.Round(scaleConfidence, 3),
-                PoseQuality: Math.Round(poseQuality, 3)));
+                PoseQuality: Math.Round(poseQuality, 3),
+                GridSpacingPx: 0,
+                GridSpacingStdDevPx: 0,
+                HomographyInlierRatio: 0,
+                PoseReprojectionErrorPx: 0,
+                GeometryDerived: false));
 
             if (measured.Count >= targetSamples)
             {
@@ -547,9 +587,23 @@ public sealed record UnderlayBoxSizeEstimate(
     IReadOnlyList<double> MeasuredBoxSizesMm,
     string DetectionMode,
     double ScaleConfidence,
-    double PoseQuality);
+    double PoseQuality,
+    double GridSpacingPx,
+    double GridSpacingStdDevPx,
+    double HomographyInlierRatio,
+    double PoseReprojectionErrorPx,
+    bool GeometryDerived);
 
 public sealed record PreviewUnderlayEstimate(
     double MeasuredBoxSizeMm,
     double ScaleConfidence,
-    double PoseQuality);
+    double PoseQuality,
+    double GridSpacingPx,
+    double GridSpacingStdDevPx,
+    double HomographyInlierRatio,
+    double PoseReprojectionErrorPx,
+    bool GeometryDerived);
+
+public sealed record PoseMetrics(
+    double PoseScore,
+    double ReprojectionErrorPx);

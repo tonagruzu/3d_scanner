@@ -12,6 +12,11 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
         IReadOnlyList<double> measuredBoxSizesMm,
         double? scaleConfidence = null,
         double? poseQuality = null,
+        double? gridSpacingPx = null,
+        double? gridSpacingStdDevPx = null,
+        double? homographyInlierRatio = null,
+        double? poseReprojectionErrorPx = null,
+        bool geometryDerived = false,
         double toleranceMm = 0.2)
     {
         if (measuredBoxSizesMm.Count == 0)
@@ -29,7 +34,12 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
                 ScaleConfidence: 0,
                 PoseQuality: 0,
                 Pass: false,
-                Notes: "No measured underlay boxes provided.");
+                Notes: "No measured underlay boxes provided.",
+                GridSpacingPx: 0,
+                GridSpacingStdDevPx: 0,
+                HomographyInlierRatio: 0,
+                PoseReprojectionErrorPx: 0,
+                GeometryDerived: false);
         }
 
         var inliers = SelectInliers(measuredBoxSizesMm);
@@ -57,7 +67,12 @@ public sealed class UnderlayPatternValidator : IUnderlayPatternValidator
             Pass: pass,
             Notes: pass
                 ? "Underlay print scale verification passed."
-                : "Underlay print scale verification failed.");
+                : "Underlay print scale verification failed.",
+            GridSpacingPx: Math.Round(Math.Max(0.0, gridSpacingPx ?? 0.0), 3),
+            GridSpacingStdDevPx: Math.Round(Math.Max(0.0, gridSpacingStdDevPx ?? 0.0), 3),
+            HomographyInlierRatio: Math.Round(Math.Clamp(homographyInlierRatio ?? 0.0, 0.0, 1.0), 3),
+            PoseReprojectionErrorPx: Math.Round(Math.Max(0.0, poseReprojectionErrorPx ?? 0.0), 3),
+            GeometryDerived: geometryDerived);
     }
 
     private static IReadOnlyList<double> SelectInliers(IReadOnlyList<double> samples)

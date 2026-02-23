@@ -32,6 +32,7 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Calibration quality gates now include deterministic reprojection percentile gating (P95) with actionable failure reasons in artifacts/run summary.
 - Intrinsic calibration diagnostics now persist per-frame inclusion/exclusion traceability plus stable rejected-frame counters by reason and category.
 - Checkerboard intrinsic detection is hardened with SB detector fallback and low-coverage frame rejection diagnostics (`corners_low_coverage`, `corners_not_found_classic`).
+- Underlay artifacts now persist explicit geometry signals from grid estimation (`gridSpacingPx`, `gridSpacingStdDevPx`, `homographyInlierRatio`, `poseReprojectionErrorPx`, `geometryDerived`) in addition to scale/pose confidence.
 - GUI now includes:
 	- camera picker + refresh,
 	- preflight summary,
@@ -55,15 +56,15 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Complete ChArUco calibration path once binding exposes required APIs (`InterpolateCornersCharuco`, `CalibrateCameraCharuco`) or equivalent wrapper is added.
 - Why high impact: unlocks physically meaningful geometry and removes placeholder calibration dependency.
 
-2) **Grid pose estimation + mm scale confidence from image geometry**
-- Estimate homography/pose from detected 10 mm grid to compute observed spacing in pixel space mapped to `mm`.
-- Add explicit `scaleConfidence` and `poseQuality` fields to underlay/calibration artifacts.
-- Why high impact: converts underlay checks from heuristic scores to geometric metrology signals.
-
-3) **Underlay geometry robustness under partial/low-quality views**
+2) **Underlay geometry robustness under partial/low-quality views**
 - Add robust fallback and confidence degradation strategy for partial checkerboard visibility and difficult lighting.
 - Persist explicit robustness path/reason markers in artifacts.
 - Why high impact: reduces false negatives and improves operational reliability in real-camera runs.
+
+3) **Calibration/underlay gate threshold tuning with real-camera dataset**
+- Tune scale/pose/reprojection thresholds against representative real-camera captures to reduce false negatives while preserving metrology safety.
+- Persist recommended profile thresholds and rationale for strict vs standard runs.
+- Why high impact: improves operator pass-rate stability without hiding genuine quality failures.
 
 ## Remaining Plan (Execution Order)
 

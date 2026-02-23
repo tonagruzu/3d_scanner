@@ -13,4 +13,9 @@ public sealed record UnderlayVerificationResult(
     double ScaleConfidence,
     double PoseQuality,
     bool Pass,
-    string Notes);
+    string Notes,
+    double GridSpacingPx = 0,
+    double GridSpacingStdDevPx = 0,
+    double HomographyInlierRatio = 0,
+    double PoseReprojectionErrorPx = 0,
+    bool GeometryDerived = false);

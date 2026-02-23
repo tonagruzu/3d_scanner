@@ -40,6 +40,10 @@ public class PipelineOrchestratorTests
         Assert.InRange(result.UnderlayVerification.FitConfidence, 0.0, 1.0);
         Assert.InRange(result.UnderlayVerification.ScaleConfidence, 0.0, 1.0);
         Assert.InRange(result.UnderlayVerification.PoseQuality, 0.0, 1.0);
+        Assert.True(result.UnderlayVerification.GridSpacingPx >= 0.0);
+        Assert.True(result.UnderlayVerification.GridSpacingStdDevPx >= 0.0);
+        Assert.InRange(result.UnderlayVerification.HomographyInlierRatio, 0.0, 1.0);
+        Assert.True(result.UnderlayVerification.PoseReprojectionErrorPx >= 0.0);
         Assert.True(result.Validation.Pass);
         Assert.Equal(0.5, result.Validation.ToleranceMm);
         Assert.True(result.Capture.AcceptedFrameCount >= 0);
@@ -87,6 +91,15 @@ public class PipelineOrchestratorTests
             Assert.InRange(scaleConfidence, 0.0, 1.0);
             var poseQuality = underlayVerification.GetProperty("poseQuality").GetDouble();
             Assert.InRange(poseQuality, 0.0, 1.0);
+            var gridSpacingPx = underlayVerification.GetProperty("gridSpacingPx").GetDouble();
+            Assert.True(gridSpacingPx >= 0.0);
+            var gridSpacingStdDevPx = underlayVerification.GetProperty("gridSpacingStdDevPx").GetDouble();
+            Assert.True(gridSpacingStdDevPx >= 0.0);
+            var homographyInlierRatio = underlayVerification.GetProperty("homographyInlierRatio").GetDouble();
+            Assert.InRange(homographyInlierRatio, 0.0, 1.0);
+            var poseReprojectionErrorPx = underlayVerification.GetProperty("poseReprojectionErrorPx").GetDouble();
+            Assert.True(poseReprojectionErrorPx >= 0.0);
+            Assert.True(underlayVerification.TryGetProperty("geometryDerived", out _));
             var detectionMode = underlayVerification.GetProperty("detectionMode").GetString();
             Assert.Contains(detectionMode, new[] { "preview-image", "frame-quality-fallback", "static-fallback" });
 

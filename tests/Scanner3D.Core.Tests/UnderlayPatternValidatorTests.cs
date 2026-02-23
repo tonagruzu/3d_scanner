@@ -22,6 +22,9 @@ public class UnderlayPatternValidatorTests
         Assert.InRange(result.ScaleConfidence, 0.0, 1.0);
         Assert.InRange(result.PoseQuality, 0.0, 1.0);
         Assert.True(result.FitConfidence > 0.6);
+        Assert.False(result.GeometryDerived);
+        Assert.Equal(0.0, result.GridSpacingPx);
+        Assert.Equal(0.0, result.HomographyInlierRatio);
     }
 
     [Fact]
@@ -38,5 +41,9 @@ public class UnderlayPatternValidatorTests
         Assert.Equal(0.0, result.ScaleConfidence);
         Assert.Equal(0.0, result.PoseQuality);
         Assert.Empty(result.InlierBoxSizesMm);
+        Assert.Equal(0.0, result.GridSpacingPx);
+        Assert.Equal(0.0, result.GridSpacingStdDevPx);
+        Assert.Equal(0.0, result.PoseReprojectionErrorPx);
+        Assert.False(result.GeometryDerived);
     }
 }
