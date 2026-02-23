@@ -53,6 +53,8 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `calibrationQuality.reprojectionResidualSamplesPx` has at least `3` values.
 - `calibrationQuality.scaleResidualSamplesMm` has at least `3` values.
 - `underlayVerification.measuredBoxSizesMm` has at least `3` values.
+- `underlayVerification.inlierBoxSizesMm` has at least `3` values.
+- `underlayVerification.fitConfidence` is in range `[0,1]` (higher is better fit confidence).
 - `underlayVerification.expectedBoxSizeMm` is `10.0`.
 - `underlayVerification.maxAbsoluteErrorMm <= 0.2` for a normal pass run.
 
@@ -64,6 +66,8 @@ $j = Get-Content "<path>" -Raw | ConvertFrom-Json
 "ReprojectionSamples={0}" -f $j.calibrationQuality.reprojectionResidualSamplesPx.Count
 "ScaleSamples={0}" -f $j.calibrationQuality.scaleResidualSamplesMm.Count
 "UnderlaySamples={0}" -f $j.underlayVerification.measuredBoxSizesMm.Count
+"UnderlayInlierSamples={0}" -f $j.underlayVerification.inlierBoxSizesMm.Count
+"UnderlayFitConfidence={0}" -f $j.underlayVerification.fitConfidence
 "UnderlayExpected={0}" -f $j.underlayVerification.expectedBoxSizeMm
 "UnderlayMaxError={0}" -f $j.underlayVerification.maxAbsoluteErrorMm
 ```
