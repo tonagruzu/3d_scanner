@@ -433,6 +433,11 @@ public partial class MainWindow : Window
         FramePreviewStatusTextBlock.Text = string.Empty;
     }
 
+    private void RefreshPreviewButton_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshPreviewFromDisk(isLiveTick: false);
+    }
+
     private void StartLivePreviewPolling()
     {
         _lastLivePreviewPath = null;
@@ -467,10 +472,20 @@ public partial class MainWindow : Window
             return;
         }
 
+        RefreshPreviewFromDisk(isLiveTick: true);
+    }
+
+    private void RefreshPreviewFromDisk(bool isLiveTick)
+    {
         try
         {
             if (!Directory.Exists(_previewDirectory))
             {
+                if (!isLiveTick)
+                {
+                    FramePreviewStatusTextBlock.Text = "No preview files found yet.";
+                }
+
                 return;
             }
 
@@ -481,9 +496,17 @@ public partial class MainWindow : Window
                 .Select(file => new { file.FullName, file.LastWriteTimeUtc })
                 .FirstOrDefault();
 
-            if (latestPreviewPath is null
-                || string.IsNullOrWhiteSpace(latestPreviewPath.FullName)
-                || string.Equals(latestPreviewPath.FullName, _lastLivePreviewPath, StringComparison.OrdinalIgnoreCase))
+            if (latestPreviewPath is null || string.IsNullOrWhiteSpace(latestPreviewPath.FullName))
+            {
+                if (!isLiveTick)
+                {
+                    FramePreviewStatusTextBlock.Text = "No preview files found yet.";
+                }
+
+                return;
+            }
+
+            if (isLiveTick && string.Equals(latestPreviewPath.FullName, _lastLivePreviewPath, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -497,6 +520,7 @@ public partial class MainWindow : Window
 
             FramePreviewImage.Source = bitmap;
             FramePreviewPlaceholderTextBlock.Visibility = Visibility.Collapsed;
+
             var now = DateTimeOffset.UtcNow;
             _previousLivePreviewTimestamp = _lastLivePreviewTimestamp;
             _lastLivePreviewTimestamp = now;
@@ -510,11 +534,18 @@ public partial class MainWindow : Window
                 fpsText = $"{(1.0 / deltaSeconds):0.0}";
             }
 
-            FramePreviewStatusTextBlock.Text = $"Live preview | age={age.TotalMilliseconds:0} ms | update~{fpsText} fps";
+            FramePreviewStatusTextBlock.Text = isLiveTick
+                ? $"Live preview | age={age.TotalMilliseconds:0} ms | update~{fpsText} fps"
+                : $"Manual refresh | age={age.TotalMilliseconds:0} ms";
+
             _lastLivePreviewPath = latestPreviewPath.FullName;
         }
         catch
         {
+            if (!isLiveTick)
+            {
+                FramePreviewStatusTextBlock.Text = "Preview image could not be loaded.";
+            }
         }
     }
 

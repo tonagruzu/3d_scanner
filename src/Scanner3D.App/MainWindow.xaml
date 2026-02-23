@@ -39,6 +39,7 @@
                         <TextBlock x:Name="FramePreviewPlaceholderTextBlock" Text="No preview available" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
+                <Button x:Name="RefreshPreviewButton" Width="130" Height="28" Margin="0,6,0,0" HorizontalAlignment="Left" Content="Refresh Preview" Click="RefreshPreviewButton_Click"/>
                 <TextBlock x:Name="FramePreviewStatusTextBlock" Text="" Margin="0,4,0,0" TextWrapping="Wrap"/>
 
                 <TextBlock Text="Camera" FontWeight="SemiBold" Margin="0,10,0,0"/>
