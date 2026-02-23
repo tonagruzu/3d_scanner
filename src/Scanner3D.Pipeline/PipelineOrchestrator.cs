@@ -10,6 +10,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var captureService = new CaptureService();
         var calibrationService = new CalibrationService();
         var calibrationResidualProvider = new MockCalibrationResidualProvider();
+        var measurementService = new MeasurementService();
         var underlayValidator = new UnderlayPatternValidator();
         var validationWriter = new JsonValidationReportWriter();
         var captureQualityAnalyzer = new CaptureQualityAnalyzer();
@@ -44,12 +45,16 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             toleranceMm: 0.2);
 
         const double toleranceMm = 0.5;
-        var measurements = new List<DimensionMeasurement>
-        {
-            new("Width", ReferenceMm: 44.00, MeasuredMm: 43.76, AbsoluteErrorMm: 0.24),
-            new("Height", ReferenceMm: 27.00, MeasuredMm: 27.31, AbsoluteErrorMm: 0.31),
-            new("Depth", ReferenceMm: 19.00, MeasuredMm: 18.87, AbsoluteErrorMm: 0.13)
-        };
+        var measurementProfile = new MeasurementProfile(
+            References:
+            [
+                new DimensionReference("Width", 44.00),
+                new DimensionReference("Height", 27.00),
+                new DimensionReference("Depth", 19.00)
+            ],
+            ProfileName: "baseline-prismatic-part");
+
+        var measurements = await measurementService.MeasureAsync(measurementProfile, calibration, cancellationToken);
 
         var maxError = measurements.Max(m => m.AbsoluteErrorMm);
         var meanError = measurements.Average(m => m.AbsoluteErrorMm);
