@@ -103,6 +103,7 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Add integration tests for end-to-end pipeline invariants (non-hardware and smoke-hardware paths).
 - Extend docs for operational troubleshooting and expected artifact schema evolution.
 - Add structured risk/rollback notes for accuracy-sensitive changes.
+- Keep GUI synchronized with available artifact metrics and diagnostics; whenever new GUI elements/metric views are added, increment the visible GUI version label.
 
 ## Definition of Done for MVP Completion
 - End-to-end pipeline produces non-placeholder mesh and six sketches.
