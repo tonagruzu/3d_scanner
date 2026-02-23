@@ -13,6 +13,8 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
+    private const string GuiVersion = "v1.8.0";
+
     private sealed record CameraOption(string DeviceId, string DisplayName)
     {
         public override string ToString() => DisplayName;
@@ -38,6 +40,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        GuiVersionTextBlock.Text = $"GUI {GuiVersion}";
+        Title = $"3D Scanner ({GuiVersion})";
         _pipelineOrchestrator = new Scanner3D.Pipeline.PipelineOrchestrator();
         _cameraDeviceDiscovery = CreateDefaultDeviceDiscovery();
         Loaded += MainWindow_Loaded;
@@ -147,6 +151,8 @@ public partial class MainWindow : Window
             StatusTextBlock.Text = "Running pipeline...";
             ValidationSummaryTextBlock.Text = "Processing";
             PreflightSummaryTextBlock.Text = "Processing";
+            CalibrationSummaryTextBlock.Text = "Processing";
+            UnderlaySummaryTextBlock.Text = "Processing";
             ClearFramePreview();
             StartLivePreviewPolling();
             ArtifactListBox.Items.Clear();
@@ -178,6 +184,8 @@ public partial class MainWindow : Window
             StatusTextBlock.Text = "Cancelled";
             ValidationSummaryTextBlock.Text = "Pipeline execution cancelled by user.";
             PreflightSummaryTextBlock.Text = "Cancelled";
+            CalibrationSummaryTextBlock.Text = "Cancelled";
+            UnderlaySummaryTextBlock.Text = "Cancelled";
         }
         catch (Exception exception)
         {
@@ -186,6 +194,8 @@ public partial class MainWindow : Window
             PreflightSummaryTextBlock.Text = exception.Message.Contains("preflight", StringComparison.OrdinalIgnoreCase)
                 ? exception.Message
                 : "Not available";
+            CalibrationSummaryTextBlock.Text = "Not available";
+            UnderlaySummaryTextBlock.Text = "Not available";
             MessageBox.Show(exception.Message, "Pipeline Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -272,6 +282,8 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
         ValidationSummaryTextBlock.Text = result.Validation.Summary;
         PreflightSummaryTextBlock.Text = BuildPreflightUiSummary(result.CapturePreflight, result.Capture);
+        CalibrationSummaryTextBlock.Text = BuildCalibrationUiSummary(result.Calibration);
+        UnderlaySummaryTextBlock.Text = BuildUnderlayUiSummary(result.UnderlayVerification);
         DisplayFramePreview(result.Capture);
 
         ArtifactListBox.Items.Clear();
@@ -302,7 +314,7 @@ public partial class MainWindow : Window
     private static string BuildRunSummary(PipelineResult result)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("Scanner3D Run Summary");
+        builder.AppendLine($"Scanner3D Run Summary (GUI {GuiVersion})");
         builder.AppendLine($"Status: {(result.Success ? "PASS" : "FAIL")}");
         builder.AppendLine($"Message: {result.Message}");
         builder.AppendLine();
@@ -347,11 +359,31 @@ public partial class MainWindow : Window
         builder.AppendLine($"- Profile: {result.Calibration.CalibrationProfileId}");
         builder.AppendLine($"- Reprojection error (px): {result.Calibration.ReprojectionErrorPx:0.###}");
         builder.AppendLine($"- Scale error (mm): {result.Calibration.ScaleErrorMm:0.###}");
+        if (result.Calibration.IntrinsicCalibration is not null)
+        {
+            var intrinsic = result.Calibration.IntrinsicCalibration;
+            builder.AppendLine("- Intrinsic calibration: available");
+            builder.AppendLine($"- Pattern: {intrinsic.PatternType} {intrinsic.PatternColumns}x{intrinsic.PatternRows} @ {intrinsic.SquareSizeMm:0.###} mm");
+            builder.AppendLine($"- Image size (px): {intrinsic.ImageWidthPx}x{intrinsic.ImageHeightPx}");
+            builder.AppendLine($"- Used frames: {intrinsic.UsedFrameIds.Count}; rejected: {intrinsic.RejectedFrameReasons.Count}");
+            if (intrinsic.CameraMatrix.Count >= 9)
+            {
+                builder.AppendLine($"- Intrinsics fx/fy/cx/cy: {intrinsic.CameraMatrix[0]:0.###}/{intrinsic.CameraMatrix[4]:0.###}/{intrinsic.CameraMatrix[2]:0.###}/{intrinsic.CameraMatrix[5]:0.###}");
+            }
+            builder.AppendLine($"- Distortion coeff count: {intrinsic.DistortionCoefficients.Count}");
+        }
+        else
+        {
+            builder.AppendLine("- Intrinsic calibration: unavailable (fallback mode)");
+        }
         builder.AppendLine();
 
         builder.AppendLine("Underlay");
         builder.AppendLine($"- Pattern: {result.UnderlayVerification.UnderlayPatternId}");
+        builder.AppendLine($"- Detection mode: {result.UnderlayVerification.DetectionMode}");
         builder.AppendLine($"- Expected box size (mm): {result.UnderlayVerification.ExpectedBoxSizeMm:0.###}");
+        builder.AppendLine($"- Inlier samples: {result.UnderlayVerification.InlierBoxSizesMm.Count}/{result.UnderlayVerification.MeasuredBoxSizesMm.Count}");
+        builder.AppendLine($"- Fit confidence: {result.UnderlayVerification.FitConfidence:0.###}");
         builder.AppendLine($"- Max box error (mm): {result.UnderlayVerification.MaxAbsoluteErrorMm:0.###}");
         builder.AppendLine();
 
@@ -394,6 +426,22 @@ public partial class MainWindow : Window
         var warningCount = preflight.Warnings.Count;
         var issueCount = preflight.BlockingIssues.Count;
         return $"{status} | backend={preflight.BackendCandidate} | warnings={warningCount} | blocking={issueCount}";
+    }
+
+    private static string BuildCalibrationUiSummary(CalibrationResult calibration)
+    {
+        var intrinsic = calibration.IntrinsicCalibration;
+        if (intrinsic is null)
+        {
+            return $"reproj={calibration.ReprojectionErrorPx:0.###} px | scale={calibration.ScaleErrorMm:0.###} mm | intrinsic=fallback";
+        }
+
+        return $"reproj={calibration.ReprojectionErrorPx:0.###} px | scale={calibration.ScaleErrorMm:0.###} mm | intrinsic={intrinsic.PatternType} | used={intrinsic.UsedFrameIds.Count} rejected={intrinsic.RejectedFrameReasons.Count}";
+    }
+
+    private static string BuildUnderlayUiSummary(UnderlayVerificationResult underlay)
+    {
+        return $"mode={underlay.DetectionMode} | fit={underlay.FitConfidence:0.###} | inliers={underlay.InlierBoxSizesMm.Count}/{underlay.MeasuredBoxSizesMm.Count} | maxErr={underlay.MaxAbsoluteErrorMm:0.###} mm";
     }
 
     private void DisplayFramePreview(CaptureResult capture)
