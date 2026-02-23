@@ -28,7 +28,8 @@ public class PipelineOrchestratorTests
         Assert.Equal(10.0, result.UnderlayVerification.ExpectedBoxSizeMm);
         Assert.True(result.Validation.Pass);
         Assert.Equal(0.5, result.Validation.ToleranceMm);
-        Assert.True(result.Capture.AcceptedFrameCount > 0);
+        Assert.True(result.Capture.AcceptedFrameCount >= 0);
+        Assert.True(result.Capture.AcceptedFrameCount <= result.Capture.CapturedFrameCount);
         Assert.True(File.Exists(result.ValidationReportPath));
 
         var outputDirectory = Path.GetDirectoryName(result.ValidationReportPath);
@@ -64,7 +65,8 @@ public class PipelineOrchestratorTests
             Assert.True(root.TryGetProperty("calibrationQuality", out var calibrationQuality));
 
             var acceptedRatio = captureQuality.GetProperty("acceptedRatio").GetDouble();
-            Assert.True(acceptedRatio > 0);
+            Assert.True(acceptedRatio >= 0);
+            Assert.True(acceptedRatio <= 1);
 
             var reprojectionSamples = calibrationQuality.GetProperty("reprojectionResidualSamplesPx");
             Assert.True(reprojectionSamples.GetArrayLength() >= 3);

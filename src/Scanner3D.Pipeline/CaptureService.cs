@@ -22,7 +22,9 @@ public sealed class CaptureService : ICaptureService
     private static ICameraDeviceDiscovery CreateDefaultDeviceDiscovery()
     {
         return OperatingSystem.IsWindows()
-            ? new CompositeCameraDeviceDiscovery(new WindowsCameraDeviceDiscovery(), new MockCameraDeviceDiscovery())
+            ? new CompositeCameraDeviceDiscovery(
+                new WindowsCameraDeviceDiscovery(),
+                new CompositeCameraDeviceDiscovery(new OpenCvCameraDeviceDiscovery(), new MockCameraDeviceDiscovery()))
             : new MockCameraDeviceDiscovery();
     }
 
@@ -36,7 +38,9 @@ public sealed class CaptureService : ICaptureService
     private static ICameraModeProvider CreateDefaultModeProvider()
     {
         return OperatingSystem.IsWindows()
-            ? new CompositeCameraModeProvider(new WindowsCameraModeProvider(), new MockCameraModeProvider())
+            ? new CompositeCameraModeProvider(
+                new WindowsCameraModeProvider(),
+                new CompositeCameraModeProvider(new OpenCvCameraModeProvider(), new MockCameraModeProvider()))
             : new MockCameraModeProvider();
     }
 
