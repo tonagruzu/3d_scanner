@@ -19,7 +19,8 @@ public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
 
             var sharpness = Math.Max(0.6, 0.95 - (index * 0.02));
             var exposure = Math.Max(0.75, 0.92 - ((index % 4) * 0.03));
-            var accepted = sharpness >= 0.8 && exposure >= 0.82;
+            var accepted = sharpness >= CaptureQualityThresholds.SharpnessMinForAcceptance
+                           && exposure >= CaptureQualityThresholds.ExposureMinForAcceptance;
 
             frames.Add(new CaptureFrame(
                 FrameId: $"{cameraDeviceId}-f-{index:000}",

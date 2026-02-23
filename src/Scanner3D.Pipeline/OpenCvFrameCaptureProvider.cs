@@ -42,7 +42,8 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
 
             var sharpness = EvaluateSharpnessScore(frame);
             var exposure = EvaluateExposureScore(frame);
-            var accepted = sharpness >= 0.82 && exposure >= 0.82;
+            var accepted = sharpness >= CaptureQualityThresholds.SharpnessMinForAcceptance
+                           && exposure >= CaptureQualityThresholds.ExposureMinForAcceptance;
             var frameId = $"opencv-cam-{index.Value}-f-{frameIndex:000}";
             var previewImagePath = SavePreviewFrame(frame, frameId);
 

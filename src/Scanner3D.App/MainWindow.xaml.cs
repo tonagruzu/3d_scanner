@@ -403,6 +403,7 @@ public partial class MainWindow : Window
         {
             ClearFramePreview();
             FramePreviewStatusTextBlock.Text = "No frame preview file was captured for this run.";
+            FrameQualityMetricsTextBlock.Text = BuildRequiredThresholdText();
             return;
         }
 
@@ -418,11 +419,13 @@ public partial class MainWindow : Window
             FramePreviewImage.Source = bitmap;
             FramePreviewPlaceholderTextBlock.Visibility = Visibility.Collapsed;
             FramePreviewStatusTextBlock.Text = $"Latest frame: {latestPreviewFrame.FrameId} ({(latestPreviewFrame.Accepted ? "accepted" : "rejected")})";
+            FrameQualityMetricsTextBlock.Text = BuildFrameQualityText(latestPreviewFrame);
         }
         catch
         {
             ClearFramePreview();
             FramePreviewStatusTextBlock.Text = "Preview image could not be loaded.";
+            FrameQualityMetricsTextBlock.Text = BuildRequiredThresholdText();
         }
     }
 
@@ -431,6 +434,7 @@ public partial class MainWindow : Window
         FramePreviewImage.Source = null;
         FramePreviewPlaceholderTextBlock.Visibility = Visibility.Visible;
         FramePreviewStatusTextBlock.Text = string.Empty;
+        FrameQualityMetricsTextBlock.Text = BuildRequiredThresholdText();
     }
 
     private void RefreshPreviewButton_Click(object sender, RoutedEventArgs e)
@@ -538,6 +542,20 @@ public partial class MainWindow : Window
                 ? $"Live preview | age={age.TotalMilliseconds:0} ms | update~{fpsText} fps"
                 : $"Manual refresh | age={age.TotalMilliseconds:0} ms";
 
+            if (_latestResult is not null)
+            {
+                var currentFrame = _latestResult.Capture.Frames
+                    .FirstOrDefault(frame => string.Equals(frame.PreviewImagePath, latestPreviewPath.FullName, StringComparison.OrdinalIgnoreCase));
+
+                FrameQualityMetricsTextBlock.Text = currentFrame is null
+                    ? BuildRequiredThresholdText()
+                    : BuildFrameQualityText(currentFrame);
+            }
+            else
+            {
+                FrameQualityMetricsTextBlock.Text = $"Live metrics pending. {BuildRequiredThresholdText()}";
+            }
+
             _lastLivePreviewPath = latestPreviewPath.FullName;
         }
         catch
@@ -545,8 +563,21 @@ public partial class MainWindow : Window
             if (!isLiveTick)
             {
                 FramePreviewStatusTextBlock.Text = "Preview image could not be loaded.";
+                FrameQualityMetricsTextBlock.Text = BuildRequiredThresholdText();
             }
         }
+    }
+
+    private static string BuildFrameQualityText(CaptureFrame frame)
+    {
+        return $"Sharpness={frame.SharpnessScore:0.000} (min {CaptureQualityThresholds.SharpnessMinForAcceptance:0.00}) | "
+             + $"Exposure={frame.ExposureScore:0.000} (min {CaptureQualityThresholds.ExposureMinForAcceptance:0.00})";
+    }
+
+    private static string BuildRequiredThresholdText()
+    {
+        return $"Required for pass: sharpness ≥ {CaptureQualityThresholds.SharpnessMinForAcceptance:0.00}, "
+             + $"exposure ≥ {CaptureQualityThresholds.ExposureMinForAcceptance:0.00}";
     }
 
     private void ExportRunSummary_Click(object sender, RoutedEventArgs e)
