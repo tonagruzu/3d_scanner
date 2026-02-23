@@ -27,6 +27,17 @@
                 <TextBlock Text="Status" FontWeight="SemiBold"/>
                 <TextBlock x:Name="StatusTextBlock" Text="Idle" Margin="0,2,0,10"/>
 
+                <TextBlock Text="Quick Card" FontWeight="SemiBold"/>
+                <TextBlock Margin="0,2,0,10" TextWrapping="Wrap">
+                    <Run Text="• Keep board fully visible, covering ~25-60% frame."/>
+                    <LineBreak/>
+                    <Run Text="• Start with 3 near-frontal frames before angled views."/>
+                    <LineBreak/>
+                    <Run Text="• Use diffuse light; avoid glare and motion blur."/>
+                    <LineBreak/>
+                    <Run Text="• If confidence is low, reframe larger board + refocus."/>
+                </TextBlock>
+
                 <TextBlock Text="Validation" FontWeight="SemiBold"/>
                 <TextBlock x:Name="ValidationSummaryTextBlock" Text="No run yet" Margin="0,2,0,10" TextWrapping="Wrap"/>
 

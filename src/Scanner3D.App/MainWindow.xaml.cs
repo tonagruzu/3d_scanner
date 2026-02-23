@@ -13,7 +13,7 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
-    private const string GuiVersion = "v2.2.0";
+    private const string GuiVersion = "v2.3.0";
 
     private sealed record CameraOption(string DeviceId, string DisplayName)
     {
