@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using Scanner3D.Core.Models;
@@ -10,6 +11,7 @@ namespace Scanner3D.App;
 public partial class MainWindow : Window
 {
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
+    private PipelineResult? _latestResult;
     private string? _latestOutputDirectory;
 
     public MainWindow()
@@ -26,6 +28,8 @@ public partial class MainWindow : Window
             ValidationSummaryTextBlock.Text = "Processing";
             ArtifactListBox.Items.Clear();
             OpenOutputButton.IsEnabled = false;
+            CopySummaryButton.IsEnabled = false;
+            _latestResult = null;
             _latestOutputDirectory = null;
 
             var session = new ScanSession(
@@ -47,8 +51,10 @@ public partial class MainWindow : Window
             }
 
             _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
+            _latestResult = result;
             OpenOutputButton.IsEnabled = !string.IsNullOrWhiteSpace(_latestOutputDirectory)
                                         && Directory.Exists(_latestOutputDirectory);
+            CopySummaryButton.IsEnabled = true;
         }
         catch (Exception exception)
         {
@@ -102,5 +108,60 @@ public partial class MainWindow : Window
         };
 
         ArtifactListBox.Items.Add(item);
+    }
+
+    private void CopyRunSummary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_latestResult is null)
+        {
+            MessageBox.Show("No run summary is available yet. Run the pipeline first.", "Copy Run Summary", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var summary = BuildRunSummary(_latestResult);
+        Clipboard.SetText(summary);
+        MessageBox.Show("Run summary copied to clipboard.", "Copy Run Summary", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private static string BuildRunSummary(PipelineResult result)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Scanner3D Run Summary");
+        builder.AppendLine($"Status: {(result.Success ? "PASS" : "FAIL")}");
+        builder.AppendLine($"Message: {result.Message}");
+        builder.AppendLine();
+
+        builder.AppendLine("Capture");
+        builder.AppendLine($"- Camera: {result.Capture.CameraDeviceId}");
+        builder.AppendLine($"- Frames: {result.Capture.AcceptedFrameCount}/{result.Capture.CapturedFrameCount} accepted");
+        builder.AppendLine();
+
+        builder.AppendLine("Calibration");
+        builder.AppendLine($"- Profile: {result.Calibration.CalibrationProfileId}");
+        builder.AppendLine($"- Reprojection error (px): {result.Calibration.ReprojectionErrorPx:0.###}");
+        builder.AppendLine($"- Scale error (mm): {result.Calibration.ScaleErrorMm:0.###}");
+        builder.AppendLine();
+
+        builder.AppendLine("Underlay");
+        builder.AppendLine($"- Pattern: {result.UnderlayVerification.UnderlayPatternId}");
+        builder.AppendLine($"- Expected box size (mm): {result.UnderlayVerification.ExpectedBoxSizeMm:0.###}");
+        builder.AppendLine($"- Max box error (mm): {result.UnderlayVerification.MaxAbsoluteErrorMm:0.###}");
+        builder.AppendLine();
+
+        builder.AppendLine("Validation");
+        builder.AppendLine($"- Summary: {result.Validation.Summary}");
+        builder.AppendLine($"- Max absolute error (mm): {result.Validation.MaxAbsoluteErrorMm:0.###}");
+        builder.AppendLine($"- Mean absolute error (mm): {result.Validation.MeanAbsoluteErrorMm:0.###}");
+        builder.AppendLine();
+
+        builder.AppendLine("Artifacts");
+        builder.AppendLine($"- Mesh: {result.MeshPath}");
+        builder.AppendLine($"- Validation report: {result.ValidationReportPath}");
+        foreach (var sketchPath in result.SketchPaths)
+        {
+            builder.AppendLine($"- Sketch: {sketchPath}");
+        }
+
+        return builder.ToString();
     }
 }
