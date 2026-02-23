@@ -5,7 +5,7 @@ namespace Scanner3D.Pipeline;
 
 public sealed class MockCalibrationResidualProvider : ICalibrationResidualProvider
 {
-    public Task<CalibrationResidualSamples> GetResidualSamplesAsync(string calibrationProfileId, CancellationToken cancellationToken = default)
+    public Task<CalibrationResidualSamples> GetResidualSamplesAsync(string calibrationProfileId, CaptureResult? captureResult = null, CancellationToken cancellationToken = default)
     {
         var samples = new CalibrationResidualSamples(
             ReprojectionResidualSamplesPx: new List<double> { 0.31, 0.44, 0.49, 0.42, 0.38 },

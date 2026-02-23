@@ -10,7 +10,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var captureService = new CaptureService();
         var capturePreflightService = new CapturePreflightService();
         var calibrationService = new CalibrationService();
-        var calibrationResidualProvider = new MockCalibrationResidualProvider();
+        var calibrationResidualProvider = new FrameBasedCalibrationResidualProvider();
         var measurementService = new MeasurementService();
         var meshService = new MeshService();
         var sketchService = new SketchService();
@@ -40,8 +40,8 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
 
         var capture = await captureService.CaptureAsync(captureSession, routedCaptureSettings, cancellationToken);
 
-        var calibration = await calibrationService.CalibrateAsync(session, cancellationToken);
-        var residualSamples = await calibrationResidualProvider.GetResidualSamplesAsync(calibration.CalibrationProfileId, cancellationToken);
+        var calibration = await calibrationService.CalibrateAsync(session, capture, cancellationToken);
+        var residualSamples = await calibrationResidualProvider.GetResidualSamplesAsync(calibration.CalibrationProfileId, capture, cancellationToken);
 
         var calibrationQuality = new CalibrationQualitySummary(
             ReprojectionErrorPx: calibration.ReprojectionErrorPx,

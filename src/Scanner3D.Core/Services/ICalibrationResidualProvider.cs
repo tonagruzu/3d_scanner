@@ -4,5 +4,5 @@ namespace Scanner3D.Core.Services;
 
 public interface ICalibrationResidualProvider
 {
-    Task<CalibrationResidualSamples> GetResidualSamplesAsync(string calibrationProfileId, CancellationToken cancellationToken = default);
+    Task<CalibrationResidualSamples> GetResidualSamplesAsync(string calibrationProfileId, CaptureResult? captureResult = null, CancellationToken cancellationToken = default);
 }
