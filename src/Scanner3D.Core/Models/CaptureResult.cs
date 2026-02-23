@@ -16,6 +16,8 @@ public sealed record CaptureResult(
     bool WhiteBalanceLockRequested,
     bool? ExposureLockVerified,
     bool? WhiteBalanceLockVerified,
+    string ExposureLockStatus,
+    string WhiteBalanceLockStatus,
     string FrameTimestampSource,
     bool FrameTimestampsMonotonic,
     string Notes);

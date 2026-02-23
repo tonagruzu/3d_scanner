@@ -8,6 +8,8 @@ public sealed record CapturePreflightResult(
     bool MockFallbackAllowed,
     bool ExposureLockVerificationSupported,
     bool WhiteBalanceLockVerificationSupported,
+    string ExposureLockCapabilityStatus,
+    string WhiteBalanceLockCapabilityStatus,
     bool TimestampReadinessPass,
     IReadOnlyList<string> BlockingIssues,
     IReadOnlyList<string> Warnings,

@@ -39,6 +39,8 @@ public class CapturePreflightServiceTests
 
         Assert.False(result.Pass);
         Assert.Contains(result.BlockingIssues, issue => issue.Contains("Mock fallback", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(LockVerificationStatus.Unsupported, result.ExposureLockCapabilityStatus);
+        Assert.Equal(LockVerificationStatus.Unsupported, result.WhiteBalanceLockCapabilityStatus);
     }
 
     [Fact]
@@ -59,6 +61,8 @@ public class CapturePreflightServiceTests
         Assert.True(result.Pass);
         Assert.Equal("mock", result.BackendCandidate);
         Assert.Single(result.ModeList);
+        Assert.Equal(LockVerificationStatus.Unsupported, result.ExposureLockCapabilityStatus);
+        Assert.Equal(LockVerificationStatus.Unsupported, result.WhiteBalanceLockCapabilityStatus);
     }
 
     private sealed class StaticDeviceDiscovery : ICameraDeviceDiscovery

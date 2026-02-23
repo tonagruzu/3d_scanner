@@ -4,6 +4,8 @@ public sealed record FrameCaptureDiagnostics(
     string BackendUsed,
     bool? ExposureLockVerified,
     bool? WhiteBalanceLockVerified,
+    string ExposureLockStatus,
+    string WhiteBalanceLockStatus,
     string TimestampSource);
 
 public sealed record FrameCaptureResult(

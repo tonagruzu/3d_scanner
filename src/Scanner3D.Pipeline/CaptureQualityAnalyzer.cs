@@ -51,14 +51,14 @@ public sealed class CaptureQualityAnalyzer
             reliabilityWarnings.Add("Accepted frame ratio is below 0.5.");
         }
 
-        if (captureResult.ExposureLockRequested && captureResult.ExposureLockVerified != true)
+        if (captureResult.ExposureLockRequested && !string.Equals(captureResult.ExposureLockStatus, LockVerificationStatus.Verified, StringComparison.OrdinalIgnoreCase))
         {
-            reliabilityWarnings.Add("Exposure lock was requested but could not be verified.");
+            reliabilityWarnings.Add($"Exposure lock requested but status is '{captureResult.ExposureLockStatus}'.");
         }
 
-        if (captureResult.WhiteBalanceLockRequested && captureResult.WhiteBalanceLockVerified != true)
+        if (captureResult.WhiteBalanceLockRequested && !string.Equals(captureResult.WhiteBalanceLockStatus, LockVerificationStatus.Verified, StringComparison.OrdinalIgnoreCase))
         {
-            reliabilityWarnings.Add("White balance lock was requested but could not be verified.");
+            reliabilityWarnings.Add($"White balance lock requested but status is '{captureResult.WhiteBalanceLockStatus}'.");
         }
 
         if (!captureResult.FrameTimestampsMonotonic)

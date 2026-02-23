@@ -39,6 +39,8 @@ public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
                 BackendUsed: "mock",
                 ExposureLockVerified: null,
                 WhiteBalanceLockVerified: null,
+                ExposureLockStatus: settings.LockExposure ? LockVerificationStatus.Unsupported : LockVerificationStatus.NotRequested,
+                WhiteBalanceLockStatus: settings.LockWhiteBalance ? LockVerificationStatus.Unsupported : LockVerificationStatus.NotRequested,
                 TimestampSource: "system_clock_utc"));
     }
 }

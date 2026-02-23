@@ -314,6 +314,8 @@ public partial class MainWindow : Window
         {
             builder.AppendLine($"- Pass: {result.CapturePreflight.Pass}");
             builder.AppendLine($"- Timestamp readiness: {result.CapturePreflight.TimestampReadinessPass}");
+            builder.AppendLine($"- Exposure lock capability: {result.CapturePreflight.ExposureLockCapabilityStatus}");
+            builder.AppendLine($"- White-balance lock capability: {result.CapturePreflight.WhiteBalanceLockCapabilityStatus}");
 
             if (result.CapturePreflight.BlockingIssues.Count > 0)
             {
@@ -337,6 +339,8 @@ public partial class MainWindow : Window
         builder.AppendLine($"- Camera: {result.Capture.CameraDeviceId}");
         builder.AppendLine($"- Frames: {result.Capture.AcceptedFrameCount}/{result.Capture.CapturedFrameCount} accepted");
         builder.AppendLine($"- Backend: {result.Capture.CaptureBackend}");
+        builder.AppendLine($"- Exposure lock status: {result.Capture.ExposureLockStatus}");
+        builder.AppendLine($"- White-balance lock status: {result.Capture.WhiteBalanceLockStatus}");
         builder.AppendLine();
 
         builder.AppendLine("Calibration");

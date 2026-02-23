@@ -65,6 +65,8 @@ public class CompositeFrameCaptureProviderTests
                     BackendUsed: "test-double",
                     ExposureLockVerified: true,
                     WhiteBalanceLockVerified: true,
+                    ExposureLockStatus: LockVerificationStatus.Verified,
+                    WhiteBalanceLockStatus: LockVerificationStatus.Verified,
                     TimestampSource: "system_clock_utc")));
         }
     }

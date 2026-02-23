@@ -16,13 +16,13 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
         var index = ParseIndex(cameraDeviceId);
         if (index is null)
         {
-            return EmptyResult();
+            return EmptyResult(settings);
         }
 
         using var capture = new VideoCapture(index.Value, VideoCaptureAPIs.DSHOW);
         if (!capture.IsOpened())
         {
-            return EmptyResult();
+            return EmptyResult(settings);
         }
 
         var frameCount = Math.Max(3, settings.TargetFrameCount);
@@ -66,10 +66,12 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
                 BackendUsed: "opencv",
                 ExposureLockVerified: null,
                 WhiteBalanceLockVerified: null,
+                ExposureLockStatus: settings.LockExposure ? LockVerificationStatus.Unsupported : LockVerificationStatus.NotRequested,
+                WhiteBalanceLockStatus: settings.LockWhiteBalance ? LockVerificationStatus.Unsupported : LockVerificationStatus.NotRequested,
                 TimestampSource: "system_clock_utc"));
     }
 
-    private static FrameCaptureResult EmptyResult()
+    private static FrameCaptureResult EmptyResult(CaptureSettings settings)
     {
         return new FrameCaptureResult(
             Frames: [],
@@ -77,6 +79,8 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
                 BackendUsed: "opencv",
                 ExposureLockVerified: null,
                 WhiteBalanceLockVerified: null,
+                ExposureLockStatus: settings.LockExposure ? LockVerificationStatus.Unsupported : LockVerificationStatus.NotRequested,
+                WhiteBalanceLockStatus: settings.LockWhiteBalance ? LockVerificationStatus.Unsupported : LockVerificationStatus.NotRequested,
                 TimestampSource: "system_clock_utc"));
     }
 

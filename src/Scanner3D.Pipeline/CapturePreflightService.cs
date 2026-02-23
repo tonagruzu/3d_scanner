@@ -63,6 +63,8 @@ public sealed class CapturePreflightService
                 MockFallbackAllowed: settings.AllowMockFallback,
                 ExposureLockVerificationSupported: false,
                 WhiteBalanceLockVerificationSupported: false,
+                ExposureLockCapabilityStatus: LockVerificationStatus.Unknown,
+                WhiteBalanceLockCapabilityStatus: LockVerificationStatus.Unknown,
                 TimestampReadinessPass: false,
                 BlockingIssues: blockingIssues,
                 Warnings: warnings,
@@ -80,18 +82,20 @@ public sealed class CapturePreflightService
             blockingIssues.Add("No supported capture modes were discovered for the selected camera.");
         }
 
-        var exposureVerificationSupported = !string.Equals(backendCandidate, "mock", StringComparison.OrdinalIgnoreCase);
-        var whiteBalanceVerificationSupported = !string.Equals(backendCandidate, "mock", StringComparison.OrdinalIgnoreCase);
+        var exposureLockCapabilityStatus = GetLockCapabilityStatus(backendCandidate);
+        var whiteBalanceLockCapabilityStatus = GetLockCapabilityStatus(backendCandidate);
+        var exposureVerificationSupported = IsLockCapabilitySupported(exposureLockCapabilityStatus);
+        var whiteBalanceVerificationSupported = IsLockCapabilitySupported(whiteBalanceLockCapabilityStatus);
         var timestampReadinessPass = !string.Equals(backendCandidate, "unknown", StringComparison.OrdinalIgnoreCase);
 
         if (settings.LockExposure && !exposureVerificationSupported)
         {
-            blockingIssues.Add("Exposure lock verification is not supported for the selected backend.");
+            blockingIssues.Add($"Exposure lock verification status is '{exposureLockCapabilityStatus}' for the selected backend.");
         }
 
         if (settings.LockWhiteBalance && !whiteBalanceVerificationSupported)
         {
-            blockingIssues.Add("White balance lock verification is not supported for the selected backend.");
+            blockingIssues.Add($"White balance lock verification status is '{whiteBalanceLockCapabilityStatus}' for the selected backend.");
         }
 
         if (!timestampReadinessPass)
@@ -129,6 +133,8 @@ public sealed class CapturePreflightService
             MockFallbackAllowed: settings.AllowMockFallback,
             ExposureLockVerificationSupported: exposureVerificationSupported,
             WhiteBalanceLockVerificationSupported: whiteBalanceVerificationSupported,
+            ExposureLockCapabilityStatus: exposureLockCapabilityStatus,
+            WhiteBalanceLockCapabilityStatus: whiteBalanceLockCapabilityStatus,
             TimestampReadinessPass: timestampReadinessPass,
             BlockingIssues: blockingIssues,
             Warnings: warnings,
@@ -161,6 +167,8 @@ public sealed class CapturePreflightService
                 MockFallbackAllowed: settings.AllowMockFallback,
                 ExposureLockVerificationSupported: false,
                 WhiteBalanceLockVerificationSupported: false,
+                ExposureLockCapabilityStatus: LockVerificationStatus.Unknown,
+                WhiteBalanceLockCapabilityStatus: LockVerificationStatus.Unknown,
                 TimestampReadinessPass: false,
                 BlockingIssues: blockingIssues,
                 Warnings: warnings,
@@ -177,18 +185,20 @@ public sealed class CapturePreflightService
             blockingIssues.Add("No supported capture modes were discovered for the selected camera.");
         }
 
-        var exposureVerificationSupported = !string.Equals(backendCandidate, "mock", StringComparison.OrdinalIgnoreCase);
-        var whiteBalanceVerificationSupported = !string.Equals(backendCandidate, "mock", StringComparison.OrdinalIgnoreCase);
+        var exposureLockCapabilityStatus = GetLockCapabilityStatus(backendCandidate);
+        var whiteBalanceLockCapabilityStatus = GetLockCapabilityStatus(backendCandidate);
+        var exposureVerificationSupported = IsLockCapabilitySupported(exposureLockCapabilityStatus);
+        var whiteBalanceVerificationSupported = IsLockCapabilitySupported(whiteBalanceLockCapabilityStatus);
         var timestampReadinessPass = !string.Equals(backendCandidate, "unknown", StringComparison.OrdinalIgnoreCase);
 
         if (settings.LockExposure && !exposureVerificationSupported)
         {
-            blockingIssues.Add("Exposure lock verification is not supported for the selected backend.");
+            blockingIssues.Add($"Exposure lock verification status is '{exposureLockCapabilityStatus}' for the selected backend.");
         }
 
         if (settings.LockWhiteBalance && !whiteBalanceVerificationSupported)
         {
-            blockingIssues.Add("White balance lock verification is not supported for the selected backend.");
+            blockingIssues.Add($"White balance lock verification status is '{whiteBalanceLockCapabilityStatus}' for the selected backend.");
         }
 
         if (!timestampReadinessPass)
@@ -226,10 +236,33 @@ public sealed class CapturePreflightService
             MockFallbackAllowed: settings.AllowMockFallback,
             ExposureLockVerificationSupported: exposureVerificationSupported,
             WhiteBalanceLockVerificationSupported: whiteBalanceVerificationSupported,
+            ExposureLockCapabilityStatus: exposureLockCapabilityStatus,
+            WhiteBalanceLockCapabilityStatus: whiteBalanceLockCapabilityStatus,
             TimestampReadinessPass: timestampReadinessPass,
             BlockingIssues: blockingIssues,
             Warnings: warnings,
             Summary: summary);
+    }
+
+    private static string GetLockCapabilityStatus(string backendCandidate)
+    {
+        if (string.Equals(backendCandidate, "windows-dshow", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(backendCandidate, "opencv", StringComparison.OrdinalIgnoreCase))
+        {
+            return LockVerificationStatus.Supported;
+        }
+
+        if (string.Equals(backendCandidate, "mock", StringComparison.OrdinalIgnoreCase))
+        {
+            return LockVerificationStatus.Unsupported;
+        }
+
+        return LockVerificationStatus.Unknown;
+    }
+
+    private static bool IsLockCapabilitySupported(string status)
+    {
+        return string.Equals(status, LockVerificationStatus.Supported, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<(string BackendName, ICameraDeviceDiscovery DeviceDiscovery, ICameraModeProvider ModeProvider)> BuildCandidateBackends(CaptureSettings settings)

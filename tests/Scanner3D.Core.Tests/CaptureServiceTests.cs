@@ -31,6 +31,8 @@ public class CaptureServiceTests
         Assert.True(result.WhiteBalanceLockRequested);
         Assert.Null(result.ExposureLockVerified);
         Assert.Null(result.WhiteBalanceLockVerified);
+        Assert.Equal(LockVerificationStatus.Unsupported, result.ExposureLockStatus);
+        Assert.Equal(LockVerificationStatus.Unsupported, result.WhiteBalanceLockStatus);
         Assert.Equal("system_clock_utc", result.FrameTimestampSource);
         Assert.True(result.FrameTimestampsMonotonic);
         Assert.Contains("mode=", result.Notes);
@@ -72,8 +74,8 @@ public class CaptureServiceTests
         };
 
         var sequenceProvider = new SequenceFrameProvider([
-            new FrameCaptureResult(firstAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc")),
-            new FrameCaptureResult(secondAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc"))
+            new FrameCaptureResult(firstAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, LockVerificationStatus.Verified, LockVerificationStatus.Verified, "system_clock_utc")),
+            new FrameCaptureResult(secondAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, LockVerificationStatus.Verified, LockVerificationStatus.Verified, "system_clock_utc"))
         ]);
 
         var service = new CaptureService(
@@ -107,8 +109,8 @@ public class CaptureServiceTests
         };
 
         var sequenceProvider = new SequenceFrameProvider([
-            new FrameCaptureResult(weakAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc")),
-            new FrameCaptureResult(weakAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc"))
+            new FrameCaptureResult(weakAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, LockVerificationStatus.Verified, LockVerificationStatus.Verified, "system_clock_utc")),
+            new FrameCaptureResult(weakAttemptFrames, new FrameCaptureDiagnostics("test-double", true, true, LockVerificationStatus.Verified, LockVerificationStatus.Verified, "system_clock_utc"))
         ]);
 
         var service = new CaptureService(
@@ -266,6 +268,8 @@ public class CaptureServiceTests
                     BackendUsed: "test-double",
                     ExposureLockVerified: true,
                     WhiteBalanceLockVerified: true,
+                    ExposureLockStatus: LockVerificationStatus.Verified,
+                    WhiteBalanceLockStatus: LockVerificationStatus.Verified,
                     TimestampSource: "system_clock_utc")));
         }
     }
@@ -291,7 +295,7 @@ public class CaptureServiceTests
             {
                 return Task.FromResult(new FrameCaptureResult(
                     Frames: [],
-                    Diagnostics: new FrameCaptureDiagnostics("test-double", true, true, "system_clock_utc")));
+                    Diagnostics: new FrameCaptureDiagnostics("test-double", true, true, LockVerificationStatus.Verified, LockVerificationStatus.Verified, "system_clock_utc")));
             }
 
             return Task.FromResult(_results.Dequeue());

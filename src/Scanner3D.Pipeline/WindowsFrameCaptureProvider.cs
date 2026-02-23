@@ -24,17 +24,17 @@ public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
         var cameraIndex = ResolveCameraIndex(cameraDeviceId);
         if (cameraIndex is null)
         {
-            return EmptyResult();
+            return EmptyResult(settings);
         }
 
         using var capture = new VideoCapture(cameraIndex.Value, VideoCaptureAPIs.DSHOW);
         if (!capture.IsOpened())
         {
-            return EmptyResult();
+            return EmptyResult(settings);
         }
 
-        var exposureLockVerified = TryVerifyLock(capture, VideoCaptureProperties.AutoExposure, ManualExposureValue, settings.LockExposure);
-        var whiteBalanceLockVerified = TryVerifyLock(capture, VideoCaptureProperties.WhiteBalanceBlueU, ManualWhiteBalanceValue, settings.LockWhiteBalance);
+        var (exposureLockVerified, exposureLockStatus) = ProbeAndVerifyLock(capture, VideoCaptureProperties.AutoExposure, ManualExposureValue, settings.LockExposure);
+        var (whiteBalanceLockVerified, whiteBalanceLockStatus) = ProbeAndVerifyLock(capture, VideoCaptureProperties.WhiteBalanceBlueU, ManualWhiteBalanceValue, settings.LockWhiteBalance);
 
         var frameCount = Math.Max(3, settings.TargetFrameCount);
         var frames = new List<CaptureFrame>(frameCount);
@@ -77,10 +77,12 @@ public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
                 BackendUsed: "windows-dshow",
                 ExposureLockVerified: exposureLockVerified,
                 WhiteBalanceLockVerified: whiteBalanceLockVerified,
+                ExposureLockStatus: exposureLockStatus,
+                WhiteBalanceLockStatus: whiteBalanceLockStatus,
                 TimestampSource: "system_clock_utc"));
     }
 
-    private static FrameCaptureResult EmptyResult()
+    private static FrameCaptureResult EmptyResult(CaptureSettings settings)
     {
         return new FrameCaptureResult(
             Frames: [],
@@ -88,6 +90,8 @@ public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
                 BackendUsed: "windows-dshow",
                 ExposureLockVerified: null,
                 WhiteBalanceLockVerified: null,
+                ExposureLockStatus: settings.LockExposure ? LockVerificationStatus.Error : LockVerificationStatus.NotRequested,
+                WhiteBalanceLockStatus: settings.LockWhiteBalance ? LockVerificationStatus.Error : LockVerificationStatus.NotRequested,
                 TimestampSource: "system_clock_utc"));
     }
 
@@ -142,32 +146,40 @@ public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
         return Math.Clamp(normalized, 0.0, 1.0);
     }
 
-    private static bool? TryVerifyLock(VideoCapture capture, VideoCaptureProperties property, double targetValue, bool lockRequested)
+    private static (bool? Verified, string Status) ProbeAndVerifyLock(VideoCapture capture, VideoCaptureProperties property, double targetValue, bool lockRequested)
     {
         if (!lockRequested)
         {
-            return null;
+            return (null, LockVerificationStatus.NotRequested);
         }
 
         try
         {
+            var currentBeforeSet = capture.Get(property);
+            if (double.IsNaN(currentBeforeSet) || double.IsInfinity(currentBeforeSet))
+            {
+                return (null, LockVerificationStatus.Unsupported);
+            }
+
             var setSucceeded = capture.Set(property, targetValue);
             var current = capture.Get(property);
             if (double.IsNaN(current) || double.IsInfinity(current))
             {
-                return null;
+                return (null, LockVerificationStatus.Unsupported);
             }
 
             if (!setSucceeded)
             {
-                return false;
+                return (null, LockVerificationStatus.Unsupported);
             }
 
-            return Math.Abs(current - targetValue) < 0.4;
+            return Math.Abs(current - targetValue) < 0.4
+                ? (true, LockVerificationStatus.Verified)
+                : (false, LockVerificationStatus.Failed);
         }
         catch
         {
-            return null;
+            return (null, LockVerificationStatus.Error);
         }
     }
 

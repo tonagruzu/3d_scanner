@@ -83,6 +83,8 @@ public sealed class CaptureService : ICaptureService
                 BackendUsed: "unknown",
                 ExposureLockVerified: null,
                 WhiteBalanceLockVerified: null,
+                ExposureLockStatus: LockVerificationStatus.Unknown,
+                WhiteBalanceLockStatus: LockVerificationStatus.Unknown,
                 TimestampSource: "unknown"));
 
         var frames = bestFrameCaptureResult.Frames;
@@ -92,7 +94,7 @@ public sealed class CaptureService : ICaptureService
             ? null
             : $"Accepted frames {acceptedFrameCount}/{requiredAcceptedFrameCount} after {attemptsUsed}/{maxCaptureAttempts} capture attempts.";
 
-        var notes = $"device={selectedDeviceName}; mode={selectedMode}; backend={bestFrameCaptureResult.Diagnostics.BackendUsed}; lockExposure={settings.LockExposure}; exposureLockVerified={bestFrameCaptureResult.Diagnostics.ExposureLockVerified?.ToString() ?? "unknown"}; lockWhiteBalance={settings.LockWhiteBalance}; whiteBalanceLockVerified={bestFrameCaptureResult.Diagnostics.WhiteBalanceLockVerified?.ToString() ?? "unknown"}; timestampSource={bestFrameCaptureResult.Diagnostics.TimestampSource}; minAccepted={requiredAcceptedFrameCount}; attempts={attemptsUsed}/{maxCaptureAttempts}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
+        var notes = $"device={selectedDeviceName}; mode={selectedMode}; backend={bestFrameCaptureResult.Diagnostics.BackendUsed}; lockExposure={settings.LockExposure}; exposureLockStatus={bestFrameCaptureResult.Diagnostics.ExposureLockStatus}; exposureLockVerified={bestFrameCaptureResult.Diagnostics.ExposureLockVerified?.ToString() ?? "unknown"}; lockWhiteBalance={settings.LockWhiteBalance}; whiteBalanceLockStatus={bestFrameCaptureResult.Diagnostics.WhiteBalanceLockStatus}; whiteBalanceLockVerified={bestFrameCaptureResult.Diagnostics.WhiteBalanceLockVerified?.ToString() ?? "unknown"}; timestampSource={bestFrameCaptureResult.Diagnostics.TimestampSource}; minAccepted={requiredAcceptedFrameCount}; attempts={attemptsUsed}/{maxCaptureAttempts}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
         if (!string.IsNullOrWhiteSpace(reliabilityFailureReason))
         {
             notes += $"; reliabilityFailure={reliabilityFailureReason}";
@@ -114,6 +116,8 @@ public sealed class CaptureService : ICaptureService
             WhiteBalanceLockRequested: settings.LockWhiteBalance,
             ExposureLockVerified: bestFrameCaptureResult.Diagnostics.ExposureLockVerified,
             WhiteBalanceLockVerified: bestFrameCaptureResult.Diagnostics.WhiteBalanceLockVerified,
+            ExposureLockStatus: bestFrameCaptureResult.Diagnostics.ExposureLockStatus,
+            WhiteBalanceLockStatus: bestFrameCaptureResult.Diagnostics.WhiteBalanceLockStatus,
             FrameTimestampSource: bestFrameCaptureResult.Diagnostics.TimestampSource,
             FrameTimestampsMonotonic: AreTimestampsMonotonic(frames),
             Notes: notes);
