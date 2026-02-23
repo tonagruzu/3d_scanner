@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Scanner3D.Core.Models;
 using Scanner3D.Core.Services;
 using Scanner3D.Pipeline;
@@ -28,6 +29,9 @@ public partial class MainWindow : Window
     private string? _latestSummaryFilePath;
     private string? _latestOutputDirectory;
     private string _selectedCameraDeviceId = "bootstrap-device";
+    private readonly string _previewDirectory = Path.Combine(Path.GetTempPath(), "scanner3d-preview");
+    private DispatcherTimer? _livePreviewTimer;
+    private string? _lastLivePreviewPath;
 
     public MainWindow()
     {
@@ -142,6 +146,7 @@ public partial class MainWindow : Window
             ValidationSummaryTextBlock.Text = "Processing";
             PreflightSummaryTextBlock.Text = "Processing";
             ClearFramePreview();
+            StartLivePreviewPolling();
             ArtifactListBox.Items.Clear();
             _latestResult = null;
             _latestSummaryFilePath = null;
@@ -183,6 +188,7 @@ public partial class MainWindow : Window
         }
         finally
         {
+            StopLivePreviewPolling();
             _runCancellationTokenSource?.Dispose();
             _runCancellationTokenSource = null;
             _isRunning = false;
@@ -423,6 +429,75 @@ public partial class MainWindow : Window
         FramePreviewImage.Source = null;
         FramePreviewPlaceholderTextBlock.Visibility = Visibility.Visible;
         FramePreviewStatusTextBlock.Text = string.Empty;
+    }
+
+    private void StartLivePreviewPolling()
+    {
+        _lastLivePreviewPath = null;
+
+        _livePreviewTimer ??= new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+
+        _livePreviewTimer.Tick -= LivePreviewTimer_Tick;
+        _livePreviewTimer.Tick += LivePreviewTimer_Tick;
+        _livePreviewTimer.Start();
+    }
+
+    private void StopLivePreviewPolling()
+    {
+        if (_livePreviewTimer is null)
+        {
+            return;
+        }
+
+        _livePreviewTimer.Stop();
+        _livePreviewTimer.Tick -= LivePreviewTimer_Tick;
+    }
+
+    private void LivePreviewTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!_isRunning)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!Directory.Exists(_previewDirectory))
+            {
+                return;
+            }
+
+            var latestPreviewPath = Directory
+                .EnumerateFiles(_previewDirectory, "*.jpg", SearchOption.TopDirectoryOnly)
+                .Select(path => new FileInfo(path))
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .Select(file => file.FullName)
+                .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(latestPreviewPath)
+                || string.Equals(latestPreviewPath, _lastLivePreviewPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(latestPreviewPath, UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            FramePreviewImage.Source = bitmap;
+            FramePreviewPlaceholderTextBlock.Visibility = Visibility.Collapsed;
+            FramePreviewStatusTextBlock.Text = "Live preview (capturing)...";
+            _lastLivePreviewPath = latestPreviewPath;
+        }
+        catch
+        {
+        }
     }
 
     private void ExportRunSummary_Click(object sender, RoutedEventArgs e)
