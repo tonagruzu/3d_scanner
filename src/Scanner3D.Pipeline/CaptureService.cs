@@ -13,7 +13,7 @@ public sealed class CaptureService : ICaptureService
         IFrameCaptureProvider? frameCaptureProvider = null)
     {
         _cameraDeviceDiscovery = cameraDeviceDiscovery ?? CreateDefaultDeviceDiscovery();
-        _frameCaptureProvider = frameCaptureProvider ?? new MockFrameCaptureProvider();
+        _frameCaptureProvider = frameCaptureProvider ?? CreateDefaultFrameCaptureProvider();
     }
 
     private static ICameraDeviceDiscovery CreateDefaultDeviceDiscovery()
@@ -21,6 +21,13 @@ public sealed class CaptureService : ICaptureService
         return OperatingSystem.IsWindows()
             ? new CompositeCameraDeviceDiscovery(new WindowsCameraDeviceDiscovery(), new MockCameraDeviceDiscovery())
             : new MockCameraDeviceDiscovery();
+    }
+
+    private static IFrameCaptureProvider CreateDefaultFrameCaptureProvider()
+    {
+        return OperatingSystem.IsWindows()
+            ? new CompositeFrameCaptureProvider(new WindowsFrameCaptureProvider(), new MockFrameCaptureProvider())
+            : new MockFrameCaptureProvider();
     }
 
     public async Task<CaptureResult> CaptureAsync(ScanSession session, CaptureSettings settings, CancellationToken cancellationToken = default)
