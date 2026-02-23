@@ -30,3 +30,4 @@
 - Pipeline completes end-to-end from capture to exports.
 - Exports preserve millimeter unit semantics.
 - Validation gate blocks releases if max absolute error exceeds 0.5 mm.
+- Intrinsic-frame calibration gating is opt-in for normal field runs; strict enforcement is enabled only via `SCANNER3D_REQUIRE_INTRINSIC_FRAMES=1` or operator notes (`require-intrinsic` / `calibration-strict`).
