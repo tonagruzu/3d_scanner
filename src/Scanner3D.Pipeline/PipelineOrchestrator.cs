@@ -112,6 +112,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
 
         var result = new PipelineResult(
             Success: success,
+            CapturePreflight: capturePreflight,
             Capture: capture,
             Calibration: calibration,
             UnderlayVerification: underlayVerification,

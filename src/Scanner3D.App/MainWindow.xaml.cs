@@ -139,6 +139,7 @@ public partial class MainWindow : Window
         {
             StatusTextBlock.Text = "Running pipeline...";
             ValidationSummaryTextBlock.Text = "Processing";
+            PreflightSummaryTextBlock.Text = "Processing";
             ArtifactListBox.Items.Clear();
             _latestResult = null;
             _latestSummaryFilePath = null;
@@ -167,11 +168,15 @@ public partial class MainWindow : Window
         {
             StatusTextBlock.Text = "Cancelled";
             ValidationSummaryTextBlock.Text = "Pipeline execution cancelled by user.";
+            PreflightSummaryTextBlock.Text = "Cancelled";
         }
         catch (Exception exception)
         {
             StatusTextBlock.Text = "Execution failed";
             ValidationSummaryTextBlock.Text = exception.Message;
+            PreflightSummaryTextBlock.Text = exception.Message.Contains("preflight", StringComparison.OrdinalIgnoreCase)
+                ? exception.Message
+                : "Not available";
             MessageBox.Show(exception.Message, "Pipeline Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -256,6 +261,7 @@ public partial class MainWindow : Window
     {
         StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
         ValidationSummaryTextBlock.Text = result.Validation.Summary;
+        PreflightSummaryTextBlock.Text = BuildPreflightUiSummary(result.CapturePreflight, result.Capture);
 
         ArtifactListBox.Items.Clear();
         AddArtifactListItem("Mesh", result.MeshPath);
@@ -290,9 +296,36 @@ public partial class MainWindow : Window
         builder.AppendLine($"Message: {result.Message}");
         builder.AppendLine();
 
+        builder.AppendLine("Preflight");
+        builder.AppendLine($"- Summary: {result.CapturePreflight?.Summary ?? "Not available"}");
+        builder.AppendLine($"- Backend candidate: {result.CapturePreflight?.BackendCandidate ?? result.Capture.CaptureBackend}");
+        if (result.CapturePreflight is not null)
+        {
+            builder.AppendLine($"- Pass: {result.CapturePreflight.Pass}");
+            builder.AppendLine($"- Timestamp readiness: {result.CapturePreflight.TimestampReadinessPass}");
+
+            if (result.CapturePreflight.BlockingIssues.Count > 0)
+            {
+                foreach (var issue in result.CapturePreflight.BlockingIssues)
+                {
+                    builder.AppendLine($"- Blocking: {issue}");
+                }
+            }
+
+            if (result.CapturePreflight.Warnings.Count > 0)
+            {
+                foreach (var warning in result.CapturePreflight.Warnings)
+                {
+                    builder.AppendLine($"- Warning: {warning}");
+                }
+            }
+        }
+        builder.AppendLine();
+
         builder.AppendLine("Capture");
         builder.AppendLine($"- Camera: {result.Capture.CameraDeviceId}");
         builder.AppendLine($"- Frames: {result.Capture.AcceptedFrameCount}/{result.Capture.CapturedFrameCount} accepted");
+        builder.AppendLine($"- Backend: {result.Capture.CaptureBackend}");
         builder.AppendLine();
 
         builder.AppendLine("Calibration");
@@ -333,6 +366,19 @@ public partial class MainWindow : Window
 
         _latestResult = entry.Result;
         DisplayResult(entry.Result);
+    }
+
+    private static string BuildPreflightUiSummary(CapturePreflightResult? preflight, CaptureResult capture)
+    {
+        if (preflight is null)
+        {
+            return $"Backend={capture.CaptureBackend}; preflight details unavailable";
+        }
+
+        var status = preflight.Pass ? "PASS" : "FAIL";
+        var warningCount = preflight.Warnings.Count;
+        var issueCount = preflight.BlockingIssues.Count;
+        return $"{status} | backend={preflight.BackendCandidate} | warnings={warningCount} | blocking={issueCount}";
     }
 
     private void ExportRunSummary_Click(object sender, RoutedEventArgs e)

@@ -23,6 +23,9 @@
                 <TextBlock Text="Validation" FontWeight="SemiBold"/>
                 <TextBlock x:Name="ValidationSummaryTextBlock" Text="No run yet" Margin="0,2,0,10" TextWrapping="Wrap"/>
 
+                <TextBlock Text="Preflight" FontWeight="SemiBold"/>
+                <TextBlock x:Name="PreflightSummaryTextBlock" Text="No run yet" Margin="0,2,0,10" TextWrapping="Wrap"/>
+
                 <TextBlock Text="Artifacts" FontWeight="SemiBold"/>
                 <ListBox x:Name="ArtifactListBox" Height="130" MouseDoubleClick="ArtifactListBox_MouseDoubleClick" Margin="0,0,0,10" />
 
