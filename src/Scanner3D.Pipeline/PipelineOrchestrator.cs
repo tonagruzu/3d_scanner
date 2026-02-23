@@ -7,23 +7,19 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
 {
     public async Task<PipelineResult> ExecuteAsync(ScanSession session, CancellationToken cancellationToken = default)
     {
+        var captureService = new CaptureService();
         var underlayValidator = new UnderlayPatternValidator();
         var validationWriter = new JsonValidationReportWriter();
         var captureQualityAnalyzer = new CaptureQualityAnalyzer();
 
-        var capturedFrames = new List<CaptureFrame>
-        {
-            new("f-001", DateTimeOffset.UtcNow, SharpnessScore: 0.93, ExposureScore: 0.91, Accepted: true),
-            new("f-002", DateTimeOffset.UtcNow, SharpnessScore: 0.89, ExposureScore: 0.90, Accepted: true),
-            new("f-003", DateTimeOffset.UtcNow, SharpnessScore: 0.72, ExposureScore: 0.88, Accepted: false)
-        };
+        var captureSettings = new CaptureSettings(
+            TargetFrameCount: 12,
+            LockExposure: true,
+            LockWhiteBalance: true,
+            UnderlayPattern: "Mata-10mm-grid",
+            LightingProfile: "diffuse-white-5600k");
 
-        var capture = new CaptureResult(
-            CameraDeviceId: session.CameraDeviceId,
-            CapturedFrameCount: capturedFrames.Count,
-            AcceptedFrameCount: capturedFrames.Count(frame => frame.Accepted),
-            Frames: capturedFrames,
-            Notes: "Stub capture summary. Replace with camera integration.");
+        var capture = await captureService.CaptureAsync(session, captureSettings, cancellationToken);
 
         var calibration = new CalibrationResult(
             CalibrationProfileId: "calib-profile-bootstrap",
