@@ -10,7 +10,10 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
+    private sealed record RunHistoryEntry(DateTimeOffset Timestamp, PipelineResult Result);
+
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
+    private readonly List<RunHistoryEntry> _runHistory = [];
     private PipelineResult? _latestResult;
     private string? _latestOutputDirectory;
 
@@ -40,21 +43,13 @@ public partial class MainWindow : Window
 
             var result = await _pipelineOrchestrator.ExecuteAsync(session);
 
-            StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
-            ValidationSummaryTextBlock.Text = result.Validation.Summary;
-
-            AddArtifactListItem("Mesh", result.MeshPath);
-            AddArtifactListItem("Validation", result.ValidationReportPath);
-            foreach (var sketchPath in result.SketchPaths)
-            {
-                AddArtifactListItem("Sketch", sketchPath);
-            }
-
             _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
             _latestResult = result;
-            OpenOutputButton.IsEnabled = !string.IsNullOrWhiteSpace(_latestOutputDirectory)
-                                        && Directory.Exists(_latestOutputDirectory);
-            CopySummaryButton.IsEnabled = true;
+
+            var historyEntry = new RunHistoryEntry(DateTimeOffset.Now, result);
+            _runHistory.Add(historyEntry);
+            AddRunHistoryListItem(historyEntry);
+            DisplayResult(result);
         }
         catch (Exception exception)
         {
@@ -110,6 +105,37 @@ public partial class MainWindow : Window
         ArtifactListBox.Items.Add(item);
     }
 
+    private void AddRunHistoryListItem(RunHistoryEntry entry)
+    {
+        var item = new ListBoxItem
+        {
+            Content = $"{entry.Timestamp:yyyy-MM-dd HH:mm:ss} | {(entry.Result.Success ? "PASS" : "FAIL")}",
+            Tag = entry
+        };
+
+        RunHistoryListBox.Items.Add(item);
+        RunHistoryListBox.SelectedItem = item;
+    }
+
+    private void DisplayResult(PipelineResult result)
+    {
+        StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
+        ValidationSummaryTextBlock.Text = result.Validation.Summary;
+
+        ArtifactListBox.Items.Clear();
+        AddArtifactListItem("Mesh", result.MeshPath);
+        AddArtifactListItem("Validation", result.ValidationReportPath);
+        foreach (var sketchPath in result.SketchPaths)
+        {
+            AddArtifactListItem("Sketch", sketchPath);
+        }
+
+        _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
+        OpenOutputButton.IsEnabled = !string.IsNullOrWhiteSpace(_latestOutputDirectory)
+                                    && Directory.Exists(_latestOutputDirectory);
+        CopySummaryButton.IsEnabled = true;
+    }
+
     private void CopyRunSummary_Click(object sender, RoutedEventArgs e)
     {
         if (_latestResult is null)
@@ -163,5 +189,16 @@ public partial class MainWindow : Window
         }
 
         return builder.ToString();
+    }
+
+    private void RunHistoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (RunHistoryListBox.SelectedItem is not ListBoxItem listItem || listItem.Tag is not RunHistoryEntry entry)
+        {
+            return;
+        }
+
+        _latestResult = entry.Result;
+        DisplayResult(entry.Result);
     }
 }
