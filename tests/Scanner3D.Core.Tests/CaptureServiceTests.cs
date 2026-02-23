@@ -9,7 +9,7 @@ public class CaptureServiceTests
     [Fact]
     public async Task CaptureAsync_UsesRequestedCameraWhenAvailable()
     {
-        var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockFrameCaptureProvider());
+        var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockCameraModeProvider(), new MockFrameCaptureProvider());
         var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "usb-hd-cam-01", "capture-test");
         var settings = new CaptureSettings(8, true, true, "Mata-10mm-grid", "diffuse");
 
@@ -18,13 +18,16 @@ public class CaptureServiceTests
         Assert.Equal("usb-hd-cam-01", result.CameraDeviceId);
         Assert.Equal(8, result.CapturedFrameCount);
         Assert.True(result.AcceptedFrameCount > 0);
+        Assert.Equal(1920, result.SelectedMode.Width);
+        Assert.Equal(1080, result.SelectedMode.Height);
+        Assert.Contains("mode=", result.Notes);
         Assert.Contains("underlay=Mata-10mm-grid", result.Notes);
     }
 
     [Fact]
     public async Task CaptureAsync_FallsBackToAvailableCameraWhenRequestedNotFound()
     {
-        var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockFrameCaptureProvider());
+        var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockCameraModeProvider(), new MockFrameCaptureProvider());
         var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "missing-camera", "capture-test");
         var settings = new CaptureSettings(5, true, false, "Mata-10mm-grid", "diffuse");
 

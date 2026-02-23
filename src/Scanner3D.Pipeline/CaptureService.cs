@@ -6,13 +6,16 @@ namespace Scanner3D.Pipeline;
 public sealed class CaptureService : ICaptureService
 {
     private readonly ICameraDeviceDiscovery _cameraDeviceDiscovery;
+    private readonly ICameraModeProvider _cameraModeProvider;
     private readonly IFrameCaptureProvider _frameCaptureProvider;
 
     public CaptureService(
         ICameraDeviceDiscovery? cameraDeviceDiscovery = null,
+        ICameraModeProvider? cameraModeProvider = null,
         IFrameCaptureProvider? frameCaptureProvider = null)
     {
         _cameraDeviceDiscovery = cameraDeviceDiscovery ?? CreateDefaultDeviceDiscovery();
+        _cameraModeProvider = cameraModeProvider ?? CreateDefaultModeProvider();
         _frameCaptureProvider = frameCaptureProvider ?? CreateDefaultFrameCaptureProvider();
     }
 
@@ -30,6 +33,13 @@ public sealed class CaptureService : ICaptureService
             : new MockFrameCaptureProvider();
     }
 
+    private static ICameraModeProvider CreateDefaultModeProvider()
+    {
+        return OperatingSystem.IsWindows()
+            ? new CompositeCameraModeProvider(new WindowsCameraModeProvider(), new MockCameraModeProvider())
+            : new MockCameraModeProvider();
+    }
+
     public async Task<CaptureResult> CaptureAsync(ScanSession session, CaptureSettings settings, CancellationToken cancellationToken = default)
     {
         var devices = await _cameraDeviceDiscovery.GetAvailableDevicesAsync(cancellationToken);
@@ -42,13 +52,19 @@ public sealed class CaptureService : ICaptureService
         var selectedDeviceId = selectedDevice?.DeviceId ?? session.CameraDeviceId;
         var selectedDeviceName = selectedDevice?.DisplayName ?? "SessionCameraFallback";
 
+        var supportedModes = await _cameraModeProvider.GetSupportedModesAsync(selectedDeviceId, cancellationToken);
+        var selectedMode = selectedDevice?.PreferredMode
+                           ?? supportedModes.FirstOrDefault()
+                           ?? new CameraCaptureMode(1280, 720, 30, "Unknown");
+
         var frames = await _frameCaptureProvider.CaptureFramesAsync(selectedDeviceId, settings.TargetFrameCount, cancellationToken);
 
         var acceptedFrameCount = frames.Count(frame => frame.Accepted);
-        var notes = $"device={selectedDeviceName}; lockExposure={settings.LockExposure}; lockWhiteBalance={settings.LockWhiteBalance}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
+        var notes = $"device={selectedDeviceName}; mode={selectedMode}; lockExposure={settings.LockExposure}; lockWhiteBalance={settings.LockWhiteBalance}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
 
         return new CaptureResult(
             CameraDeviceId: selectedDeviceId,
+            SelectedMode: selectedMode,
             CapturedFrameCount: frames.Count,
             AcceptedFrameCount: acceptedFrameCount,
             Frames: frames,

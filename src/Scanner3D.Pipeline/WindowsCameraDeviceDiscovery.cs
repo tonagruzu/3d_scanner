@@ -38,7 +38,8 @@ public sealed class WindowsCameraDeviceDiscovery : ICameraDeviceDiscovery
                 devices.Add(new CameraDeviceInfo(
                     DeviceId: pnpDeviceId,
                     DisplayName: name,
-                    IsAvailable: true));
+                    IsAvailable: true,
+                    PreferredMode: new CameraCaptureMode(1920, 1080, 30, "Unknown")));
             }
         }
         catch
