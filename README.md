@@ -41,3 +41,24 @@ Notes:
 - Camera probing currently checks indexes `0..5`.
 - Discovery and mode metadata are recorded into capture notes and quality reports.
 - This is a Phase 1 implementation focused on capture plumbing; full reconstruction fidelity improvements continue in later phases.
+
+## Real-Camera Smoke Test Command
+Use this command to run a single pipeline execution without UI and print the generated `validation.json` path plus capture capability metadata:
+
+```powershell
+$tmp = Join-Path $env:TEMP ("scanner3d-smoke-" + [Guid]::NewGuid().ToString("N")); dotnet new console -n Smoke -o $tmp | Out-Null; dotnet add (Join-Path $tmp "Smoke.csproj") reference ".\src\Scanner3D.Pipeline\Scanner3D.Pipeline.csproj" | Out-Null; @'
+using System.Text.Json;
+using Scanner3D.Core.Models;
+using Scanner3D.Pipeline;
+
+var orchestrator = new PipelineOrchestrator();
+var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "test-device", "smoke");
+var result = await orchestrator.ExecuteAsync(session);
+Console.WriteLine($"ValidationPath={result.ValidationReportPath}");
+using var stream = File.OpenRead(result.ValidationReportPath);
+using var doc = await JsonDocument.ParseAsync(stream);
+var caps = doc.RootElement.GetProperty("captureCapabilities");
+Console.WriteLine($"BackendUsed={caps.GetProperty("backendUsed").GetString()}");
+Console.WriteLine($"ModeList.Count={caps.GetProperty("modeList").GetArrayLength()}");
+'@ | Set-Content -Path (Join-Path $tmp "Program.cs") -Encoding UTF8; dotnet run --project (Join-Path $tmp "Smoke.csproj") -c Release
+```
