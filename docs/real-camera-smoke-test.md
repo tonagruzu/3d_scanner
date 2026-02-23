@@ -46,4 +46,26 @@ Open the generated `validation.json` and verify `captureCapabilities` exists wit
 - `modeList[]`
 - `backendUsed`
 
+## Phase 2 Starter Checks (Calibration + Underlay)
+In the same `validation.json`, verify the new Phase 2 starter outputs:
+
+- `calibration.notes` contains `frame-derived` when real capture frames were available.
+- `calibrationQuality.reprojectionResidualSamplesPx` has at least `3` values.
+- `calibrationQuality.scaleResidualSamplesMm` has at least `3` values.
+- `underlayVerification.measuredBoxSizesMm` has at least `3` values.
+- `underlayVerification.expectedBoxSizeMm` is `10.0`.
+- `underlayVerification.maxAbsoluteErrorMm <= 0.2` for a normal pass run.
+
+Quick PowerShell check (replace `<path>` with your `validation.json`):
+
+```powershell
+$j = Get-Content "<path>" -Raw | ConvertFrom-Json
+"CalibrationNotes={0}" -f $j.calibration.notes
+"ReprojectionSamples={0}" -f $j.calibrationQuality.reprojectionResidualSamplesPx.Count
+"ScaleSamples={0}" -f $j.calibrationQuality.scaleResidualSamplesMm.Count
+"UnderlaySamples={0}" -f $j.underlayVerification.measuredBoxSizesMm.Count
+"UnderlayExpected={0}" -f $j.underlayVerification.expectedBoxSizeMm
+"UnderlayMaxError={0}" -f $j.underlayVerification.maxAbsoluteErrorMm
+```
+
 This smoke test is non-blocking for image quality; it validates capture pipeline plumbing and metadata persistence.
