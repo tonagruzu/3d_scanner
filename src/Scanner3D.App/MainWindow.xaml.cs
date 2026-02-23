@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
     private readonly List<RunHistoryEntry> _runHistory = [];
     private bool _isRunning;
+    private CancellationTokenSource? _runCancellationTokenSource;
     private PipelineResult? _latestResult;
     private string? _latestSummaryFilePath;
     private string? _latestOutputDirectory;
@@ -46,13 +47,15 @@ public partial class MainWindow : Window
             _latestOutputDirectory = null;
             UpdateActionStates();
 
+            _runCancellationTokenSource = new CancellationTokenSource();
+
             var session = new ScanSession(
                 SessionId: Guid.NewGuid(),
                 StartedAt: DateTimeOffset.UtcNow,
                 CameraDeviceId: "bootstrap-device",
                 OperatorNotes: "Initial pipeline shell execution");
 
-            var result = await _pipelineOrchestrator.ExecuteAsync(session);
+            var result = await _pipelineOrchestrator.ExecuteAsync(session, _runCancellationTokenSource.Token);
 
             _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
             _latestResult = result;
@@ -62,6 +65,11 @@ public partial class MainWindow : Window
             AddRunHistoryListItem(historyEntry);
             DisplayResult(result);
         }
+        catch (OperationCanceledException)
+        {
+            StatusTextBlock.Text = "Cancelled";
+            ValidationSummaryTextBlock.Text = "Pipeline execution cancelled by user.";
+        }
         catch (Exception exception)
         {
             StatusTextBlock.Text = "Execution failed";
@@ -70,9 +78,22 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _runCancellationTokenSource?.Dispose();
+            _runCancellationTokenSource = null;
             _isRunning = false;
             UpdateActionStates();
         }
+    }
+
+    private void CancelRunButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_isRunning)
+        {
+            return;
+        }
+
+        _runCancellationTokenSource?.Cancel();
+        StatusTextBlock.Text = "Cancelling...";
     }
 
     private void OpenOutputFolder_Click(object sender, RoutedEventArgs e)
@@ -263,6 +284,7 @@ public partial class MainWindow : Window
         var hasSummaryFile = !string.IsNullOrWhiteSpace(_latestSummaryFilePath) && File.Exists(_latestSummaryFilePath);
 
         RunPipelineButton.IsEnabled = !_isRunning;
+        CancelRunButton.IsEnabled = _isRunning;
         OpenOutputButton.IsEnabled = !_isRunning && hasOutputDirectory;
         CopySummaryButton.IsEnabled = !_isRunning && hasResult;
         ExportSummaryButton.IsEnabled = !_isRunning && hasOutputDirectory && hasResult;

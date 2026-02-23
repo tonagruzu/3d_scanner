@@ -1,0 +1,179 @@
+{
+  "sessionId": "b3c74776-d567-4919-a882-c4421a5574fc",
+  "generatedAt": "2026-02-23T17:14:37.5831569+00:00",
+  "capture": {
+    "cameraDeviceId": "bootstrap-device",
+    "capturedFrameCount": 12,
+    "acceptedFrameCount": 7,
+    "frames": [
+      {
+        "frameId": "bootstrap-device-f-001",
+        "capturedAt": "2026-02-23T17:14:37.6548755+00:00",
+        "sharpnessScore": 0.9299999999999999,
+        "exposureScore": 0.89,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-002",
+        "capturedAt": "2026-02-23T17:14:37.7549644+00:00",
+        "sharpnessScore": 0.9099999999999999,
+        "exposureScore": 0.8600000000000001,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-003",
+        "capturedAt": "2026-02-23T17:14:37.8549664+00:00",
+        "sharpnessScore": 0.8899999999999999,
+        "exposureScore": 0.8300000000000001,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-004",
+        "capturedAt": "2026-02-23T17:14:37.9549667+00:00",
+        "sharpnessScore": 0.87,
+        "exposureScore": 0.92,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-005",
+        "capturedAt": "2026-02-23T17:14:38.0549668+00:00",
+        "sharpnessScore": 0.85,
+        "exposureScore": 0.89,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-006",
+        "capturedAt": "2026-02-23T17:14:38.1549669+00:00",
+        "sharpnessScore": 0.83,
+        "exposureScore": 0.8600000000000001,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-007",
+        "capturedAt": "2026-02-23T17:14:38.254967+00:00",
+        "sharpnessScore": 0.8099999999999999,
+        "exposureScore": 0.8300000000000001,
+        "accepted": true
+      },
+      {
+        "frameId": "bootstrap-device-f-008",
+        "capturedAt": "2026-02-23T17:14:38.3549672+00:00",
+        "sharpnessScore": 0.7899999999999999,
+        "exposureScore": 0.92,
+        "accepted": false
+      },
+      {
+        "frameId": "bootstrap-device-f-009",
+        "capturedAt": "2026-02-23T17:14:38.4549673+00:00",
+        "sharpnessScore": 0.77,
+        "exposureScore": 0.89,
+        "accepted": false
+      },
+      {
+        "frameId": "bootstrap-device-f-010",
+        "capturedAt": "2026-02-23T17:14:38.5549675+00:00",
+        "sharpnessScore": 0.75,
+        "exposureScore": 0.8600000000000001,
+        "accepted": false
+      },
+      {
+        "frameId": "bootstrap-device-f-011",
+        "capturedAt": "2026-02-23T17:14:38.6549677+00:00",
+        "sharpnessScore": 0.73,
+        "exposureScore": 0.8300000000000001,
+        "accepted": false
+      },
+      {
+        "frameId": "bootstrap-device-f-012",
+        "capturedAt": "2026-02-23T17:14:38.7549678+00:00",
+        "sharpnessScore": 0.71,
+        "exposureScore": 0.92,
+        "accepted": false
+      }
+    ],
+    "notes": "Capture settings: lockExposure=True, lockWhiteBalance=True, underlay=Mata-10mm-grid, lighting=diffuse-white-5600k"
+  },
+  "captureQuality": {
+    "totalFrames": 12,
+    "acceptedFrames": 7,
+    "acceptedRatio": 0.5833333333333334,
+    "meanSharpness": 0.82,
+    "meanExposure": 0.875,
+    "rejectionCounts": {
+      "manual_reject": 5
+    },
+    "summary": "Capture quality may be insufficient; consider retakes."
+  },
+  "underlayVerification": {
+    "performed": true,
+    "underlayPatternId": "Mata-10mm-grid",
+    "expectedBoxSizeMm": 10,
+    "measuredBoxSizesMm": [
+      9.96,
+      10.04,
+      10.07,
+      9.98,
+      10.02
+    ],
+    "meanBoxSizeMm": 10.014,
+    "maxAbsoluteErrorMm": 0.07000000000000028,
+    "pass": true,
+    "notes": "Underlay print scale verification passed."
+  },
+  "calibration": {
+    "calibrationProfileId": "calib-b3c74776d5674919a882c4421a5574fc",
+    "calibratedAt": "2026-02-23T17:14:37.5552591+00:00",
+    "reprojectionErrorPx": 0.42,
+    "scaleErrorMm": 0.12,
+    "isWithinTolerance": true,
+    "notes": "Calibration completed within configured tolerances."
+  },
+  "calibrationQuality": {
+    "reprojectionErrorPx": 0.42,
+    "scaleErrorMm": 0.12,
+    "reprojectionResidualSamplesPx": [
+      0.31,
+      0.44,
+      0.49,
+      0.42,
+      0.38
+    ],
+    "scaleResidualSamplesMm": [
+      0.08,
+      0.12,
+      0.1,
+      0.14,
+      0.11
+    ],
+    "summary": "Calibration quality is within configured tolerance limits."
+  },
+  "validation": {
+    "sessionId": "b3c74776-d567-4919-a882-c4421a5574fc",
+    "generatedAt": "2026-02-23T17:14:37.5602034+00:00",
+    "toleranceMm": 0.5,
+    "measurements": [
+      {
+        "name": "Width",
+        "referenceMm": 44,
+        "measuredMm": 43.784,
+        "absoluteErrorMm": 0.216
+      },
+      {
+        "name": "Height",
+        "referenceMm": 27,
+        "measuredMm": 27.264,
+        "absoluteErrorMm": 0.264
+      },
+      {
+        "name": "Depth",
+        "referenceMm": 19,
+        "measuredMm": 18.868,
+        "absoluteErrorMm": 0.132
+      }
+    ],
+    "maxAbsoluteErrorMm": 0.264,
+    "meanAbsoluteErrorMm": 0.204,
+    "pass": true,
+    "summary": "Validation pass: all measured dimensions are within \u00B10.5 mm."
+  }
+}

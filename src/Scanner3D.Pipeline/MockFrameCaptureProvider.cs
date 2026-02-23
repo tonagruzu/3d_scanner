@@ -5,7 +5,7 @@ namespace Scanner3D.Pipeline;
 
 public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
 {
-    public Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+    public async Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
         string cameraDeviceId,
         int targetFrameCount,
         CancellationToken cancellationToken = default)
@@ -15,6 +15,8 @@ public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
 
         for (var index = 1; index <= frameCount; index++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var sharpness = Math.Max(0.6, 0.95 - (index * 0.02));
             var exposure = Math.Max(0.75, 0.92 - ((index % 4) * 0.03));
             var accepted = sharpness >= 0.8 && exposure >= 0.82;
@@ -25,8 +27,10 @@ public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
                 SharpnessScore: sharpness,
                 ExposureScore: exposure,
                 Accepted: accepted));
+
+            await Task.Delay(35, cancellationToken);
         }
 
-        return Task.FromResult<IReadOnlyList<CaptureFrame>>(frames);
+        return frames;
     }
 }
