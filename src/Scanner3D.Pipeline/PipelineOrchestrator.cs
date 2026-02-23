@@ -62,26 +62,11 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
 
         var usedIntrinsicFrames = calibration.IntrinsicCalibration?.UsedFrameIds.Count ?? 0;
         var requireIntrinsicFrames = IsStrictIntrinsicGateRequired(session);
-        var calibrationGateFailures = new List<string>();
-        if (requireIntrinsicFrames && usedIntrinsicFrames < CalibrationGateThresholds.MinUsableIntrinsicFrames)
-        {
-            calibrationGateFailures.Add($"intrinsic_frames={usedIntrinsicFrames} < {CalibrationGateThresholds.MinUsableIntrinsicFrames}");
-        }
-
-        if (calibration.ReprojectionErrorPx > CalibrationGateThresholds.MaxReprojectionErrorPx)
-        {
-            calibrationGateFailures.Add($"reprojection_error={calibration.ReprojectionErrorPx:0.###} > {CalibrationGateThresholds.MaxReprojectionErrorPx:0.###}");
-        }
-
-        if (underlayVerification.ScaleConfidence < CalibrationGateThresholds.MinUnderlayScaleConfidence)
-        {
-            calibrationGateFailures.Add($"scale_confidence={underlayVerification.ScaleConfidence:0.###} < {CalibrationGateThresholds.MinUnderlayScaleConfidence:0.###}");
-        }
-
-        if (underlayVerification.PoseQuality < CalibrationGateThresholds.MinUnderlayPoseQuality)
-        {
-            calibrationGateFailures.Add($"pose_quality={underlayVerification.PoseQuality:0.###} < {CalibrationGateThresholds.MinUnderlayPoseQuality:0.###}");
-        }
+        var calibrationGateFailures = CalibrationGateEvaluator.Evaluate(
+            calibration,
+            residualSamples,
+            underlayVerification,
+            requireIntrinsicFrames);
 
         var calibrationGatePass = calibrationGateFailures.Count == 0;
         var calibrationQuality = new CalibrationQualitySummary(

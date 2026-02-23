@@ -29,6 +29,7 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Calibration now consumes capture context and derives calibration metrics from captured frame quality (with deterministic fallback).
 - Underlay verification now uses frame-derived measured box-size estimates from preview images with quality-based fallback.
 - Underlay fitting now performs outlier rejection and computes persisted fit confidence (`fitConfidence`) plus persisted detection path (`detectionMode`).
+- Calibration quality gates now include deterministic reprojection percentile gating (P95) with actionable failure reasons in artifacts/run summary.
 - GUI now includes:
 	- camera picker + refresh,
 	- preflight summary,
@@ -46,20 +47,20 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Phase 6: not started
 
 ### Top 3 Next Tasks (Most Impactful for Phase 2)
-1) **Camera intrinsic calibration from real frames (checkerboard/ChArUco)**
+1) **Intrinsic residual diagnostics hardening (frame inclusion quality traceability)**
+- Persist and expose per-frame intrinsic inclusion diagnostics (accepted/rejected by detector + reason classes) as first-class calibration quality outputs.
+- Add stable summary counters for usable/rejected intrinsic frames by reason category.
+- Why high impact: improves operator troubleshooting and gives deterministic evidence for strict calibration runs.
+
+2) **Camera intrinsic calibration from real frames (checkerboard/ChArUco)**
 - Implement corner detection and `cv::calibrateCamera`-equivalent flow in pipeline service.
 - Persist camera matrix, distortion coefficients, reprojection residual distribution, and frame inclusion/exclusion reasons.
 - Why high impact: unlocks physically meaningful geometry and removes placeholder calibration dependency.
 
-2) **Grid pose estimation + mm scale confidence from image geometry**
+3) **Grid pose estimation + mm scale confidence from image geometry**
 - Estimate homography/pose from detected 10 mm grid to compute observed spacing in pixel space mapped to `mm`.
 - Add explicit `scaleConfidence` and `poseQuality` fields to underlay/calibration artifacts.
 - Why high impact: converts underlay checks from heuristic scores to geometric metrology signals.
-
-3) **Calibration-quality gates with deterministic fail criteria**
-- Add hard gates for min usable calibration frames, max reprojection error percentile, and min scale confidence.
-- Enforce these in orchestrator success criteria and include actionable failure reasons in run summary.
-- Why high impact: prevents downstream reconstruction on weak calibration runs and stabilizes Phase 3 inputs.
 
 ## Remaining Plan (Execution Order)
 
