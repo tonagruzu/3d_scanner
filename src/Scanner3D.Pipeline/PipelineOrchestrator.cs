@@ -15,6 +15,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var meshService = new MeshService();
         var sketchService = new SketchService();
         var underlayValidator = new UnderlayPatternValidator();
+        var underlayBoxEstimator = new UnderlayBoxSizeEstimator();
         var validationWriter = new JsonValidationReportWriter();
         var captureQualityAnalyzer = new CaptureQualityAnalyzer();
 
@@ -54,10 +55,12 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
 
         var captureQuality = captureQualityAnalyzer.Analyze(capture);
 
+        var expectedUnderlayBoxSizeMm = 10.0;
+        var measuredUnderlayBoxSizesMm = underlayBoxEstimator.EstimateMeasuredBoxSizesMm(capture, expectedUnderlayBoxSizeMm);
         var underlayVerification = underlayValidator.Validate(
             underlayPatternId: "Mata-10mm-grid",
-            expectedBoxSizeMm: 10.0,
-            measuredBoxSizesMm: new List<double> { 9.96, 10.04, 10.07, 9.98, 10.02 },
+            expectedBoxSizeMm: expectedUnderlayBoxSizeMm,
+            measuredBoxSizesMm: measuredUnderlayBoxSizesMm,
             toleranceMm: 0.2);
 
         const double toleranceMm = 0.5;
