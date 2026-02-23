@@ -29,3 +29,6 @@
 ## Calibration Discipline
 - Perform calibration at defined cadence and after setup disturbance.
 - Record calibration artifact IDs and residuals in session metadata.
+
+## Operator Run Recipe
+- For real-camera session setup, framing sequence, and pass/fail recovery actions, use `docs/real-camera-run-recipe.md`.
