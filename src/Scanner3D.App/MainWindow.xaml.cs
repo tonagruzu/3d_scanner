@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using Scanner3D.Core.Models;
 using Scanner3D.Core.Services;
@@ -7,6 +9,7 @@ namespace Scanner3D.App;
 public partial class MainWindow : Window
 {
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
+    private string? _latestOutputDirectory;
 
     public MainWindow()
     {
@@ -21,6 +24,8 @@ public partial class MainWindow : Window
             StatusTextBlock.Text = "Running pipeline...";
             ValidationSummaryTextBlock.Text = "Processing";
             ArtifactListBox.Items.Clear();
+            OpenOutputButton.IsEnabled = false;
+            _latestOutputDirectory = null;
 
             var session = new ScanSession(
                 SessionId: Guid.NewGuid(),
@@ -39,6 +44,10 @@ public partial class MainWindow : Window
             {
                 ArtifactListBox.Items.Add($"Sketch: {sketchPath}");
             }
+
+            _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
+            OpenOutputButton.IsEnabled = !string.IsNullOrWhiteSpace(_latestOutputDirectory)
+                                        && Directory.Exists(_latestOutputDirectory);
         }
         catch (Exception exception)
         {
@@ -46,5 +55,20 @@ public partial class MainWindow : Window
             ValidationSummaryTextBlock.Text = exception.Message;
             MessageBox.Show(exception.Message, "Pipeline Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void OpenOutputFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_latestOutputDirectory) || !Directory.Exists(_latestOutputDirectory))
+        {
+            MessageBox.Show("No output folder is available yet. Run the pipeline first.", "Output Folder", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = _latestOutputDirectory,
+            UseShellExecute = true
+        });
     }
 }
