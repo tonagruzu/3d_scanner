@@ -5,12 +5,12 @@ namespace Scanner3D.Pipeline;
 
 public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
 {
-    public async Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+    public async Task<FrameCaptureResult> CaptureFramesAsync(
         string cameraDeviceId,
-        int targetFrameCount,
+        CaptureSettings settings,
         CancellationToken cancellationToken = default)
     {
-        var frameCount = Math.Max(3, targetFrameCount);
+        var frameCount = Math.Max(3, settings.TargetFrameCount);
         var frames = new List<CaptureFrame>(frameCount);
 
         for (var index = 1; index <= frameCount; index++)
@@ -31,6 +31,12 @@ public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
             await Task.Delay(35, cancellationToken);
         }
 
-        return frames;
+        return new FrameCaptureResult(
+            Frames: frames,
+            Diagnostics: new FrameCaptureDiagnostics(
+                BackendUsed: "mock",
+                ExposureLockVerified: null,
+                WhiteBalanceLockVerified: null,
+                TimestampSource: "system_clock_utc"));
     }
 }

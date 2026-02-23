@@ -21,6 +21,13 @@ public class CaptureServiceTests
         Assert.True(result.AcceptedFrameCount > 0);
         Assert.Equal(1920, result.SelectedMode.Width);
         Assert.Equal(1080, result.SelectedMode.Height);
+        Assert.Equal("mock", result.CaptureBackend);
+        Assert.True(result.ExposureLockRequested);
+        Assert.True(result.WhiteBalanceLockRequested);
+        Assert.Null(result.ExposureLockVerified);
+        Assert.Null(result.WhiteBalanceLockVerified);
+        Assert.Equal("system_clock_utc", result.FrameTimestampSource);
+        Assert.True(result.FrameTimestampsMonotonic);
         Assert.Contains("mode=", result.Notes);
         Assert.Contains("underlay=Mata-10mm-grid", result.Notes);
     }
@@ -163,13 +170,19 @@ public class CaptureServiceTests
 
         public string? LastCameraDeviceId { get; private set; }
 
-        public Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+        public Task<FrameCaptureResult> CaptureFramesAsync(
             string cameraDeviceId,
-            int targetFrameCount,
+            CaptureSettings settings,
             CancellationToken cancellationToken = default)
         {
             LastCameraDeviceId = cameraDeviceId;
-            return Task.FromResult(_frames);
+            return Task.FromResult(new FrameCaptureResult(
+                Frames: _frames,
+                Diagnostics: new FrameCaptureDiagnostics(
+                    BackendUsed: "test-double",
+                    ExposureLockVerified: true,
+                    WhiteBalanceLockVerified: true,
+                    TimestampSource: "system_clock_utc")));
         }
     }
 }

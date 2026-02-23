@@ -6,4 +6,11 @@ public sealed record CaptureResult(
     int CapturedFrameCount,
     int AcceptedFrameCount,
     IReadOnlyList<CaptureFrame> Frames,
+    string CaptureBackend,
+    bool ExposureLockRequested,
+    bool WhiteBalanceLockRequested,
+    bool? ExposureLockVerified,
+    bool? WhiteBalanceLockVerified,
+    string FrameTimestampSource,
+    bool FrameTimestampsMonotonic,
     string Notes);

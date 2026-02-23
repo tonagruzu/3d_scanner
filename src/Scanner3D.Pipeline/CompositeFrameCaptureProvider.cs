@@ -14,15 +14,15 @@ public sealed class CompositeFrameCaptureProvider : IFrameCaptureProvider
         _fallback = fallback;
     }
 
-    public async Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+    public async Task<FrameCaptureResult> CaptureFramesAsync(
         string cameraDeviceId,
-        int targetFrameCount,
+        CaptureSettings settings,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var primaryFrames = await _primary.CaptureFramesAsync(cameraDeviceId, targetFrameCount, cancellationToken);
-            if (primaryFrames.Count > 0)
+            var primaryFrames = await _primary.CaptureFramesAsync(cameraDeviceId, settings, cancellationToken);
+            if (primaryFrames.Frames.Count > 0)
             {
                 return primaryFrames;
             }
@@ -31,6 +31,6 @@ public sealed class CompositeFrameCaptureProvider : IFrameCaptureProvider
         {
         }
 
-        return await _fallback.CaptureFramesAsync(cameraDeviceId, targetFrameCount, cancellationToken);
+        return await _fallback.CaptureFramesAsync(cameraDeviceId, settings, cancellationToken);
     }
 }

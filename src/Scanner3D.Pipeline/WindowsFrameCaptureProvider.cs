@@ -9,29 +9,34 @@ namespace Scanner3D.Pipeline;
 public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
 {
     private const int ProbeLimit = 6;
+    private const double ManualExposureValue = 0.25;
+    private const double ManualWhiteBalanceValue = 0.0;
 
     public WindowsFrameCaptureProvider()
     {
     }
 
-    public async Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+    public async Task<FrameCaptureResult> CaptureFramesAsync(
         string cameraDeviceId,
-        int targetFrameCount,
+        CaptureSettings settings,
         CancellationToken cancellationToken = default)
     {
         var cameraIndex = ResolveCameraIndex(cameraDeviceId);
         if (cameraIndex is null)
         {
-            return [];
+            return EmptyResult();
         }
 
         using var capture = new VideoCapture(cameraIndex.Value, VideoCaptureAPIs.DSHOW);
         if (!capture.IsOpened())
         {
-            return [];
+            return EmptyResult();
         }
 
-        var frameCount = Math.Max(3, targetFrameCount);
+        var exposureLockVerified = TryVerifyLock(capture, VideoCaptureProperties.AutoExposure, ManualExposureValue, settings.LockExposure);
+        var whiteBalanceLockVerified = TryVerifyLock(capture, VideoCaptureProperties.WhiteBalanceBlueU, ManualWhiteBalanceValue, settings.LockWhiteBalance);
+
+        var frameCount = Math.Max(3, settings.TargetFrameCount);
         var frames = new List<CaptureFrame>(frameCount);
 
         for (var index = 1; index <= frameCount; index++)
@@ -60,7 +65,24 @@ public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
             await Task.Delay(20, cancellationToken);
         }
 
-        return frames;
+        return new FrameCaptureResult(
+            Frames: frames,
+            Diagnostics: new FrameCaptureDiagnostics(
+                BackendUsed: "windows-dshow",
+                ExposureLockVerified: exposureLockVerified,
+                WhiteBalanceLockVerified: whiteBalanceLockVerified,
+                TimestampSource: "system_clock_utc"));
+    }
+
+    private static FrameCaptureResult EmptyResult()
+    {
+        return new FrameCaptureResult(
+            Frames: [],
+            Diagnostics: new FrameCaptureDiagnostics(
+                BackendUsed: "windows-dshow",
+                ExposureLockVerified: null,
+                WhiteBalanceLockVerified: null,
+                TimestampSource: "system_clock_utc"));
     }
 
     private static int? ResolveCameraIndex(string cameraDeviceId)
@@ -112,5 +134,34 @@ public sealed class WindowsFrameCaptureProvider : IFrameCaptureProvider
         var distanceFromMid = Math.Abs(mean - 127.5);
         var normalized = 1.0 - (distanceFromMid / 127.5);
         return Math.Clamp(normalized, 0.0, 1.0);
+    }
+
+    private static bool? TryVerifyLock(VideoCapture capture, VideoCaptureProperties property, double targetValue, bool lockRequested)
+    {
+        if (!lockRequested)
+        {
+            return null;
+        }
+
+        try
+        {
+            var setSucceeded = capture.Set(property, targetValue);
+            var current = capture.Get(property);
+            if (double.IsNaN(current) || double.IsInfinity(current))
+            {
+                return null;
+            }
+
+            if (!setSucceeded)
+            {
+                return false;
+            }
+
+            return Math.Abs(current - targetValue) < 0.4;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

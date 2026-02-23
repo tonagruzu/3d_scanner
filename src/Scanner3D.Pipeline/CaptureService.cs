@@ -61,10 +61,11 @@ public sealed class CaptureService : ICaptureService
                            ?? supportedModes.FirstOrDefault()
                            ?? new CameraCaptureMode(1280, 720, 30, "Unknown");
 
-        var frames = await _frameCaptureProvider.CaptureFramesAsync(selectedDeviceId, settings.TargetFrameCount, cancellationToken);
+        var frameCaptureResult = await _frameCaptureProvider.CaptureFramesAsync(selectedDeviceId, settings, cancellationToken);
+        var frames = frameCaptureResult.Frames;
 
         var acceptedFrameCount = frames.Count(frame => frame.Accepted);
-        var notes = $"device={selectedDeviceName}; mode={selectedMode}; lockExposure={settings.LockExposure}; lockWhiteBalance={settings.LockWhiteBalance}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
+        var notes = $"device={selectedDeviceName}; mode={selectedMode}; backend={frameCaptureResult.Diagnostics.BackendUsed}; lockExposure={settings.LockExposure}; exposureLockVerified={frameCaptureResult.Diagnostics.ExposureLockVerified?.ToString() ?? "unknown"}; lockWhiteBalance={settings.LockWhiteBalance}; whiteBalanceLockVerified={frameCaptureResult.Diagnostics.WhiteBalanceLockVerified?.ToString() ?? "unknown"}; timestampSource={frameCaptureResult.Diagnostics.TimestampSource}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
 
         return new CaptureResult(
             CameraDeviceId: selectedDeviceId,
@@ -72,6 +73,26 @@ public sealed class CaptureService : ICaptureService
             CapturedFrameCount: frames.Count,
             AcceptedFrameCount: acceptedFrameCount,
             Frames: frames,
+            CaptureBackend: frameCaptureResult.Diagnostics.BackendUsed,
+            ExposureLockRequested: settings.LockExposure,
+            WhiteBalanceLockRequested: settings.LockWhiteBalance,
+            ExposureLockVerified: frameCaptureResult.Diagnostics.ExposureLockVerified,
+            WhiteBalanceLockVerified: frameCaptureResult.Diagnostics.WhiteBalanceLockVerified,
+            FrameTimestampSource: frameCaptureResult.Diagnostics.TimestampSource,
+            FrameTimestampsMonotonic: AreTimestampsMonotonic(frames),
             Notes: notes);
+    }
+
+    private static bool AreTimestampsMonotonic(IReadOnlyList<CaptureFrame> frames)
+    {
+        for (var index = 1; index < frames.Count; index++)
+        {
+            if (frames[index].CapturedAt < frames[index - 1].CapturedAt)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -19,7 +19,8 @@ public class CompositeFrameCaptureProviderTests
             new StaticFrameProvider(primaryFrames),
             new StaticFrameProvider([]));
 
-        var frames = await provider.CaptureFramesAsync("cam-1", 3);
+        var result = await provider.CaptureFramesAsync("cam-1", new CaptureSettings(3, true, true, "grid", "diffuse"));
+        var frames = result.Frames;
 
         Assert.Single(frames);
         Assert.Equal("primary-f-001", frames[0].FrameId);
@@ -37,7 +38,8 @@ public class CompositeFrameCaptureProviderTests
             new StaticFrameProvider([]),
             new StaticFrameProvider(fallbackFrames));
 
-        var frames = await provider.CaptureFramesAsync("cam-1", 3);
+        var result = await provider.CaptureFramesAsync("cam-1", new CaptureSettings(3, true, true, "grid", "diffuse"));
+        var frames = result.Frames;
 
         Assert.Single(frames);
         Assert.Equal("fallback-f-001", frames[0].FrameId);
@@ -52,12 +54,18 @@ public class CompositeFrameCaptureProviderTests
             _frames = frames;
         }
 
-        public Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+        public Task<FrameCaptureResult> CaptureFramesAsync(
             string cameraDeviceId,
-            int targetFrameCount,
+            CaptureSettings settings,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(_frames);
+            return Task.FromResult(new FrameCaptureResult(
+                Frames: _frames,
+                Diagnostics: new FrameCaptureDiagnostics(
+                    BackendUsed: "test-double",
+                    ExposureLockVerified: true,
+                    WhiteBalanceLockVerified: true,
+                    TimestampSource: "system_clock_utc")));
         }
     }
 }

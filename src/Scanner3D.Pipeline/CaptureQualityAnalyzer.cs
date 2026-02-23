@@ -19,8 +19,38 @@ public sealed class CaptureQualityAnalyzer
             ["manual_reject"] = rejectedCount
         };
 
+        var reliabilityWarnings = new List<string>();
+        if (total < 3)
+        {
+            reliabilityWarnings.Add("Too few frames captured for reliable session quality.");
+        }
+
+        if (acceptedRatio < 0.5)
+        {
+            reliabilityWarnings.Add("Accepted frame ratio is below 0.5.");
+        }
+
+        if (captureResult.ExposureLockRequested && captureResult.ExposureLockVerified != true)
+        {
+            reliabilityWarnings.Add("Exposure lock was requested but could not be verified.");
+        }
+
+        if (captureResult.WhiteBalanceLockRequested && captureResult.WhiteBalanceLockVerified != true)
+        {
+            reliabilityWarnings.Add("White balance lock was requested but could not be verified.");
+        }
+
+        if (!captureResult.FrameTimestampsMonotonic)
+        {
+            reliabilityWarnings.Add("Frame timestamps are not monotonic.");
+        }
+
+        var reliabilityPass = reliabilityWarnings.Count == 0;
+
         var summary = acceptedRatio >= 0.8
-            ? "Capture quality is acceptable for reconstruction."
+            ? (reliabilityPass
+                ? "Capture quality is acceptable for reconstruction."
+                : "Capture quality appears acceptable, but reliability checks reported warnings.")
             : "Capture quality may be insufficient; consider retakes.";
 
         return new CaptureQualitySummary(
@@ -30,6 +60,8 @@ public sealed class CaptureQualityAnalyzer
             MeanSharpness: meanSharpness,
             MeanExposure: meanExposure,
             RejectionCounts: rejectionCounts,
+            ReliabilityPass: reliabilityPass,
+            ReliabilityWarnings: reliabilityWarnings,
             Summary: summary);
     }
 }

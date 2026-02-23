@@ -30,7 +30,9 @@ public sealed class JsonValidationReportWriter : IValidationReportWriter
         var displayName = TryExtractCaptureNoteValue(report.Capture.Notes, "device")
             ?? report.Capture.CameraDeviceId;
 
-        var backend = InferBackend(report.Capture.CameraDeviceId, report.Capture.Frames);
+        var backend = string.IsNullOrWhiteSpace(report.Capture.CaptureBackend)
+            ? InferBackend(report.Capture.CameraDeviceId, report.Capture.Frames)
+            : report.Capture.CaptureBackend;
         var supportedModes = GetSupportedModes(backend, report.Capture.SelectedMode);
 
         return new CaptureCapabilityDetails(

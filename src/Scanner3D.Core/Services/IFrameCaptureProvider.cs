@@ -4,8 +4,8 @@ namespace Scanner3D.Core.Services;
 
 public interface IFrameCaptureProvider
 {
-    Task<IReadOnlyList<CaptureFrame>> CaptureFramesAsync(
+    Task<FrameCaptureResult> CaptureFramesAsync(
         string cameraDeviceId,
-        int targetFrameCount,
+        CaptureSettings settings,
         CancellationToken cancellationToken = default);
 }

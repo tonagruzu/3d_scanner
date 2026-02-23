@@ -7,4 +7,6 @@ public sealed record CaptureQualitySummary(
     double MeanSharpness,
     double MeanExposure,
     IReadOnlyDictionary<string, int> RejectionCounts,
+    bool ReliabilityPass,
+    IReadOnlyList<string> ReliabilityWarnings,
     string Summary);
