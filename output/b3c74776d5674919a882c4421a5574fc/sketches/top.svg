@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-  <rect x="40" y="40" width="720" height="520" fill="none" stroke="black" stroke-width="2" />
-  <text x="60" y="80" font-size="24" font-family="Segoe UI">View: top</text>
-  <text x="60" y="115" font-size="14" font-family="Segoe UI">Session: b3c74776d5674919a882c4421a5574fc</text>
-  <text x="60" y="170" font-size="16" font-family="Segoe UI">Width: ref 44 mm, measured 43,784 mm, error 0,216 mm</text>
-  <text x="60" y="200" font-size="16" font-family="Segoe UI">Height: ref 27 mm, measured 27,264 mm, error 0,264 mm</text>
-  <text x="60" y="230" font-size="16" font-family="Segoe UI">Depth: ref 19 mm, measured 18,868 mm, error 0,132 mm</text>
-</svg>

@@ -34,3 +34,4 @@ venv/
 # Temporary datasets and generated scan payloads
 data/tmp/
 scans/tmp/
+output/
