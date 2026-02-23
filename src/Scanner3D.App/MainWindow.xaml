@@ -28,6 +28,16 @@
 
                 <TextBlock Text="Run History" FontWeight="SemiBold"/>
                 <ListBox x:Name="RunHistoryListBox" Height="90" SelectionChanged="RunHistoryListBox_SelectionChanged" />
+
+                <TextBlock Text="Camera" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                <Grid Margin="0,2,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="CameraPickerComboBox" Height="28" DisplayMemberPath="DisplayName" SelectedValuePath="DeviceId" SelectionChanged="CameraPickerComboBox_SelectionChanged"/>
+                    <Button x:Name="RefreshCamerasButton" Grid.Column="1" Margin="12,0,0,0" Width="110" Height="28" Content="Refresh" Click="RefreshCamerasButton_Click"/>
+                </Grid>
             </StackPanel>
         </Border>
 

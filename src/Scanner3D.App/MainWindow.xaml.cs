@@ -5,26 +5,109 @@ using System.Windows;
 using System.Windows.Controls;
 using Scanner3D.Core.Models;
 using Scanner3D.Core.Services;
+using Scanner3D.Pipeline;
 
 namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
+    private sealed record CameraOption(string DeviceId, string DisplayName)
+    {
+        public override string ToString() => DisplayName;
+    }
+
     private sealed record RunHistoryEntry(DateTimeOffset Timestamp, PipelineResult Result);
 
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
+    private readonly ICameraDeviceDiscovery _cameraDeviceDiscovery;
     private readonly List<RunHistoryEntry> _runHistory = [];
     private bool _isRunning;
     private CancellationTokenSource? _runCancellationTokenSource;
     private PipelineResult? _latestResult;
     private string? _latestSummaryFilePath;
     private string? _latestOutputDirectory;
+    private string _selectedCameraDeviceId = "bootstrap-device";
 
     public MainWindow()
     {
         InitializeComponent();
         _pipelineOrchestrator = new Scanner3D.Pipeline.PipelineOrchestrator();
+        _cameraDeviceDiscovery = CreateDefaultDeviceDiscovery();
+        Loaded += MainWindow_Loaded;
         UpdateActionStates();
+    }
+
+    private static ICameraDeviceDiscovery CreateDefaultDeviceDiscovery()
+    {
+        return OperatingSystem.IsWindows()
+            ? new CompositeCameraDeviceDiscovery(
+                new WindowsCameraDeviceDiscovery(),
+                new CompositeCameraDeviceDiscovery(new OpenCvCameraDeviceDiscovery(), new MockCameraDeviceDiscovery()))
+            : new MockCameraDeviceDiscovery();
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        await ReloadCameraDevicesAsync();
+    }
+
+    private async Task ReloadCameraDevicesAsync()
+    {
+        var currentSelection = CameraPickerComboBox.SelectedValue as string;
+
+        try
+        {
+            CameraPickerComboBox.Items.Clear();
+
+            var devices = await _cameraDeviceDiscovery.GetAvailableDevicesAsync();
+            var availableDevices = devices.Where(device => device.IsAvailable).ToList();
+
+            if (availableDevices.Count == 0)
+            {
+                var fallback = new CameraOption("bootstrap-device", "No camera detected (fallback)");
+                CameraPickerComboBox.Items.Add(fallback);
+                CameraPickerComboBox.SelectedItem = fallback;
+                _selectedCameraDeviceId = fallback.DeviceId;
+                return;
+            }
+
+            foreach (var device in availableDevices)
+            {
+                CameraPickerComboBox.Items.Add(new CameraOption(device.DeviceId, device.DisplayName));
+            }
+
+            var preferredSelection = availableDevices.FirstOrDefault(device =>
+                string.Equals(device.DeviceId, currentSelection, StringComparison.OrdinalIgnoreCase))?.DeviceId
+                ?? availableDevices.FirstOrDefault(device =>
+                    string.Equals(device.DeviceId, _selectedCameraDeviceId, StringComparison.OrdinalIgnoreCase))?.DeviceId
+                ?? availableDevices[0].DeviceId;
+
+            CameraPickerComboBox.SelectedValue = preferredSelection;
+            _selectedCameraDeviceId = preferredSelection;
+        }
+        catch (Exception exception)
+        {
+            CameraPickerComboBox.Items.Clear();
+            var fallback = new CameraOption("bootstrap-device", "Camera discovery failed (fallback)");
+            CameraPickerComboBox.Items.Add(fallback);
+            CameraPickerComboBox.SelectedItem = fallback;
+            _selectedCameraDeviceId = fallback.DeviceId;
+            StatusTextBlock.Text = "Camera discovery failed";
+            ValidationSummaryTextBlock.Text = exception.Message;
+        }
+    }
+
+    private async void RefreshCamerasButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ReloadCameraDevicesAsync();
+    }
+
+    private void CameraPickerComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CameraPickerComboBox.SelectedItem is CameraOption option)
+        {
+            _selectedCameraDeviceId = option.DeviceId;
+        }
     }
 
     private async void RunPipelineStub_Click(object sender, RoutedEventArgs e)
@@ -52,7 +135,7 @@ public partial class MainWindow : Window
             var session = new ScanSession(
                 SessionId: Guid.NewGuid(),
                 StartedAt: DateTimeOffset.UtcNow,
-                CameraDeviceId: "bootstrap-device",
+                CameraDeviceId: _selectedCameraDeviceId,
                 OperatorNotes: "Initial pipeline shell execution");
 
             var result = await _pipelineOrchestrator.ExecuteAsync(session, _runCancellationTokenSource.Token);
@@ -291,5 +374,7 @@ public partial class MainWindow : Window
         OpenSummaryButton.IsEnabled = !_isRunning && hasSummaryFile;
         RunHistoryListBox.IsEnabled = !_isRunning;
         ArtifactListBox.IsEnabled = !_isRunning;
+        CameraPickerComboBox.IsEnabled = !_isRunning;
+        RefreshCamerasButton.IsEnabled = !_isRunning;
     }
 }
