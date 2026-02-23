@@ -55,6 +55,10 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `calibrationQuality.gatePass` is `true` for a passing run.
 - `calibrationQuality.gateFailures` is empty for a passing run.
 - `calibrationQuality.usedIntrinsicFrames >= calibrationQuality.minimumRequiredIntrinsicFrames` only when strict intrinsic gating is enabled.
+- `calibrationQuality.intrinsicFramesEvaluated >= calibrationQuality.intrinsicFramesRejected`.
+- `calibrationQuality.intrinsicRejectedFramesByReason` is an object map (`reasonCode -> count`).
+- `calibrationQuality.intrinsicRejectedFramesByCategory` is an object map (`reasonCategory -> count`).
+- `calibrationQuality.intrinsicFrameDiagnostics[]` contains per-frame entries with `frameId`, `included`, `reasonCode`, `reasonCategory`.
 - `calibrationQuality.underlayScaleConfidence` and `calibrationQuality.underlayPoseQuality` are each in range `[0,1]`.
 - `underlayVerification.measuredBoxSizesMm` has at least `3` values.
 - `underlayVerification.inlierBoxSizesMm` has at least `3` values.
@@ -83,6 +87,11 @@ $j = Get-Content "<path>" -Raw | ConvertFrom-Json
 "CalibrationGatePass={0}" -f $j.calibrationQuality.gatePass
 "CalibrationGateFailures={0}" -f $j.calibrationQuality.gateFailures.Count
 "IntrinsicFramesUsed={0}/{1}" -f $j.calibrationQuality.usedIntrinsicFrames, $j.calibrationQuality.minimumRequiredIntrinsicFrames
+"IntrinsicFramesEvaluated={0}" -f $j.calibrationQuality.intrinsicFramesEvaluated
+"IntrinsicFramesRejected={0}" -f $j.calibrationQuality.intrinsicFramesRejected
+"IntrinsicRejectedByReason.Keys={0}" -f ($j.calibrationQuality.intrinsicRejectedFramesByReason.PSObject.Properties.Name -join ",")
+"IntrinsicRejectedByCategory.Keys={0}" -f ($j.calibrationQuality.intrinsicRejectedFramesByCategory.PSObject.Properties.Name -join ",")
+"IntrinsicFrameDiagnostics.Count={0}" -f $j.calibrationQuality.intrinsicFrameDiagnostics.Count
 "UnderlayScaleConfidence={0}" -f $j.calibrationQuality.underlayScaleConfidence
 "UnderlayPoseQuality={0}" -f $j.calibrationQuality.underlayPoseQuality
 "UnderlaySamples={0}" -f $j.underlayVerification.measuredBoxSizesMm.Count
