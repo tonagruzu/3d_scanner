@@ -5,6 +5,8 @@ namespace Scanner3D.Pipeline;
 
 public sealed class UnderlayBoxSizeEstimator
 {
+    private const int MinimumUnderlaySamples = 3;
+
     public UnderlayBoxSizeEstimate EstimateMeasuredBoxSizesMm(
         CaptureResult capture,
         double expectedBoxSizeMm,
@@ -27,13 +29,31 @@ public sealed class UnderlayBoxSizeEstimator
         }
 
         var fromFrameQuality = EstimateFromFrameQuality(capture, expectedBoxSizeMm, targetSamples).ToList();
-        if (fromFrameQuality.Count >= 3)
+        if (fromFrameQuality.Count > 0)
         {
+            var normalized = EnsureMinimumSamples(fromFrameQuality, MinimumUnderlaySamples);
             return new UnderlayBoxSizeEstimate(
-                MeasuredBoxSizesMm: fromFrameQuality.Select(item => item.MeasuredBoxSizeMm).ToList(),
+                MeasuredBoxSizesMm: normalized.Select(item => item.MeasuredBoxSizeMm).ToList(),
                 DetectionMode: "frame-quality-fallback",
-                ScaleConfidence: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.ScaleConfidence), 0.0, 1.0), 3),
-                PoseQuality: Math.Round(Math.Clamp(fromFrameQuality.Average(item => item.PoseQuality), 0.0, 1.0), 3),
+                ScaleConfidence: Math.Round(Math.Clamp(normalized.Average(item => item.ScaleConfidence), 0.0, 1.0), 3),
+                PoseQuality: Math.Round(Math.Clamp(normalized.Average(item => item.PoseQuality), 0.0, 1.0), 3),
+                GridSpacingPx: 0,
+                GridSpacingStdDevPx: 0,
+                HomographyInlierRatio: 0,
+                PoseReprojectionErrorPx: 0,
+                GeometryDerived: false);
+        }
+
+        var fromAllFrames = EstimateFromFrameQuality(capture, expectedBoxSizeMm, targetSamples, useAllFramesWhenAcceptedUnavailable: true).ToList();
+        if (fromAllFrames.Count > 0)
+        {
+            var normalized = EnsureMinimumSamples(fromAllFrames, MinimumUnderlaySamples);
+            var qualityPenalty = capture.AcceptedFrameCount == 0 ? 0.75 : 0.9;
+            return new UnderlayBoxSizeEstimate(
+                MeasuredBoxSizesMm: normalized.Select(item => item.MeasuredBoxSizeMm).ToList(),
+                DetectionMode: "frame-quality-fallback",
+                ScaleConfidence: Math.Round(Math.Clamp(normalized.Average(item => item.ScaleConfidence) * qualityPenalty, 0.0, 1.0), 3),
+                PoseQuality: Math.Round(Math.Clamp(normalized.Average(item => item.PoseQuality) * qualityPenalty, 0.0, 1.0), 3),
                 GridSpacingPx: 0,
                 GridSpacingStdDevPx: 0,
                 HomographyInlierRatio: 0,
@@ -44,8 +64,8 @@ public sealed class UnderlayBoxSizeEstimator
         return new UnderlayBoxSizeEstimate(
             MeasuredBoxSizesMm: [expectedBoxSizeMm - 0.04, expectedBoxSizeMm + 0.04, expectedBoxSizeMm + 0.02],
             DetectionMode: "static-fallback",
-            ScaleConfidence: 0.25,
-            PoseQuality: 0.20,
+            ScaleConfidence: BuildStaticFallbackScaleConfidence(capture),
+            PoseQuality: BuildStaticFallbackPoseQuality(capture),
             GridSpacingPx: 0,
             GridSpacingStdDevPx: 0,
             HomographyInlierRatio: 0,
@@ -115,11 +135,20 @@ public sealed class UnderlayBoxSizeEstimator
         IntrinsicCalibrationDetails? intrinsicCalibration)
     {
         var pattern = new Size(9, 6);
-        var found = Cv2.FindChessboardCorners(
+        var found = Cv2.FindChessboardCornersSB(
             image,
             pattern,
             out var corners,
-            ChessboardFlags.AdaptiveThresh | ChessboardFlags.NormalizeImage | ChessboardFlags.FastCheck);
+            ChessboardFlags.Exhaustive | ChessboardFlags.Accuracy | ChessboardFlags.NormalizeImage);
+
+        if (!found)
+        {
+            found = Cv2.FindChessboardCorners(
+                image,
+                pattern,
+                out corners,
+                ChessboardFlags.AdaptiveThresh | ChessboardFlags.NormalizeImage | ChessboardFlags.FastCheck);
+        }
 
         if (!found || corners.Length != pattern.Width * pattern.Height)
         {
@@ -494,9 +523,22 @@ public sealed class UnderlayBoxSizeEstimator
     }
 
     private static IEnumerable<PreviewUnderlayEstimate> EstimateFromFrameQuality(CaptureResult capture, double expectedBoxSizeMm, int targetSamples)
+        => EstimateFromFrameQuality(capture, expectedBoxSizeMm, targetSamples, useAllFramesWhenAcceptedUnavailable: false);
+
+    private static IEnumerable<PreviewUnderlayEstimate> EstimateFromFrameQuality(
+        CaptureResult capture,
+        double expectedBoxSizeMm,
+        int targetSamples,
+        bool useAllFramesWhenAcceptedUnavailable)
     {
         var measured = new List<PreviewUnderlayEstimate>();
-        foreach (var frame in capture.Frames.Where(frame => frame.Accepted))
+        var frames = capture.Frames.Where(frame => frame.Accepted).ToList();
+        if (frames.Count == 0 && useAllFramesWhenAcceptedUnavailable)
+        {
+            frames = capture.Frames.ToList();
+        }
+
+        foreach (var frame in frames)
         {
             var sharpnessBias = (0.9 - frame.SharpnessScore) * 0.12;
             var exposureBias = (0.5 - frame.ExposureScore) * 0.06;
@@ -505,6 +547,12 @@ public sealed class UnderlayBoxSizeEstimator
 
             var scaleConfidence = Math.Clamp((frame.SharpnessScore * 0.65) + (frame.ExposureScore * 0.35), 0.0, 1.0);
             var poseQuality = Math.Clamp((frame.SharpnessScore * 0.55) + (frame.ExposureScore * 0.25), 0.0, 1.0);
+
+            if (!frame.Accepted)
+            {
+                scaleConfidence *= 0.8;
+                poseQuality *= 0.75;
+            }
 
             measured.Add(new PreviewUnderlayEstimate(
                 MeasuredBoxSizeMm: measuredSize,
@@ -523,6 +571,51 @@ public sealed class UnderlayBoxSizeEstimator
         }
 
         return measured;
+    }
+
+    private static IReadOnlyList<PreviewUnderlayEstimate> EnsureMinimumSamples(
+        IReadOnlyList<PreviewUnderlayEstimate> values,
+        int minimumCount)
+    {
+        if (values.Count >= minimumCount || values.Count == 0)
+        {
+            return values;
+        }
+
+        var result = values.ToList();
+        var pivot = result.OrderBy(item => item.MeasuredBoxSizeMm).ElementAt(result.Count / 2);
+        while (result.Count < minimumCount)
+        {
+            result.Add(pivot);
+        }
+
+        return result;
+    }
+
+    private static double BuildStaticFallbackScaleConfidence(CaptureResult capture)
+    {
+        if (capture.Frames.Count == 0)
+        {
+            return 0.25;
+        }
+
+        var baseScore = capture.Frames.Average(frame => (frame.SharpnessScore * 0.60) + (frame.ExposureScore * 0.40));
+        var acceptedRatio = capture.CapturedFrameCount == 0 ? 0 : capture.AcceptedFrameCount / (double)capture.CapturedFrameCount;
+        var confidence = (baseScore * 0.55) + (acceptedRatio * 0.25) + 0.15;
+        return Math.Round(Math.Clamp(confidence, 0.25, 0.62), 3);
+    }
+
+    private static double BuildStaticFallbackPoseQuality(CaptureResult capture)
+    {
+        if (capture.Frames.Count == 0)
+        {
+            return 0.20;
+        }
+
+        var baseScore = capture.Frames.Average(frame => (frame.SharpnessScore * 0.55) + (frame.ExposureScore * 0.30));
+        var acceptedRatio = capture.CapturedFrameCount == 0 ? 0 : capture.AcceptedFrameCount / (double)capture.CapturedFrameCount;
+        var quality = (baseScore * 0.50) + (acceptedRatio * 0.20) + 0.12;
+        return Math.Round(Math.Clamp(quality, 0.20, 0.52), 3);
     }
 
     private static double? ComputeMedianSpacing(IReadOnlyList<double> positions)

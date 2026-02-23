@@ -60,6 +60,23 @@ public class UnderlayBoxSizeEstimatorTests
     }
 
     [Fact]
+    public void EstimateMeasuredBoxSizesMm_UsesFrameQualityFallback_WhenOnlyTwoAcceptedFrames()
+    {
+        var estimator = new UnderlayBoxSizeEstimator();
+        var capture = BuildCaptureResult(
+            new CaptureFrame("f-001", DateTimeOffset.UtcNow, 100, 0.89, 0.81, true),
+            new CaptureFrame("f-002", DateTimeOffset.UtcNow, 200, 0.90, 0.80, true),
+            new CaptureFrame("f-003", DateTimeOffset.UtcNow, 300, 0.72, 0.70, false));
+
+        var estimate = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, targetSamples: 5);
+
+        Assert.Equal("frame-quality-fallback", estimate.DetectionMode);
+        Assert.True(estimate.MeasuredBoxSizesMm.Count >= 3);
+        Assert.InRange(estimate.ScaleConfidence, 0.60, 1.0);
+        Assert.InRange(estimate.PoseQuality, 0.45, 1.0);
+    }
+
+    [Fact]
     public void EstimateMeasuredBoxSizesMm_UsesCheckerboardGeometry_WhenIntrinsicCalibrationProvided()
     {
         var estimator = new UnderlayBoxSizeEstimator();
