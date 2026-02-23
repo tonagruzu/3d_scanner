@@ -17,6 +17,7 @@ public class PipelineOrchestratorTests
 
         Assert.True(result.Success);
         Assert.Equal(6, result.SketchPaths.Count);
+        Assert.All(result.SketchPaths, sketchPath => Assert.True(File.Exists(sketchPath)));
         Assert.False(string.IsNullOrWhiteSpace(result.Capture.CameraDeviceId));
         Assert.True(result.Capture.CapturedFrameCount >= 3);
         Assert.True(result.Calibration.IsWithinTolerance);

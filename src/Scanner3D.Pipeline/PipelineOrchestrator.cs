@@ -11,6 +11,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var calibrationService = new CalibrationService();
         var calibrationResidualProvider = new MockCalibrationResidualProvider();
         var measurementService = new MeasurementService();
+        var sketchService = new SketchService();
         var underlayValidator = new UnderlayPatternValidator();
         var validationWriter = new JsonValidationReportWriter();
         var captureQualityAnalyzer = new CaptureQualityAnalyzer();
@@ -72,22 +73,14 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
                 ? "Validation pass: all measured dimensions are within ±0.5 mm."
                 : "Validation fail: one or more measured dimensions exceed ±0.5 mm.");
 
-        var sketches = new List<string>
-        {
-            "front.svg",
-            "back.svg",
-            "left.svg",
-            "right.svg",
-            "top.svg",
-            "bottom.svg"
-        };
+        var outputDirectory = Path.Combine("output", session.SessionId.ToString("N"));
+        var sketches = await sketchService.GenerateOrthographicSketchesAsync(session.SessionId, measurements, outputDirectory, cancellationToken);
 
         var success = calibration.IsWithinTolerance && underlayVerification.Pass && validation.Pass;
         var message = success
             ? "Pipeline stub executed. Underlay, calibration, and dimensional checks are within configured tolerances."
             : "Pipeline stub executed with failed quality gates. Review underlay, calibration, and validation outputs.";
 
-        var outputDirectory = Path.Combine("output", session.SessionId.ToString("N"));
         var qualityReport = new ScanQualityReport(
             SessionId: session.SessionId,
             GeneratedAt: DateTimeOffset.UtcNow,
@@ -106,7 +99,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             Calibration: calibration,
             UnderlayVerification: underlayVerification,
             Validation: validation,
-            MeshPath: "output/model.obj",
+            MeshPath: Path.Combine(outputDirectory, "model.obj"),
             SketchPaths: sketches,
             ValidationReportPath: validationReportPath,
             Message: message);
