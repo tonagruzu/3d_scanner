@@ -3,6 +3,9 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Scanner3D.Core\Scanner3D.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -9,7 +9,7 @@ public class CaptureServiceTests
     [Fact]
     public async Task CaptureAsync_UsesRequestedCameraWhenAvailable()
     {
-        var service = new CaptureService();
+        var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockFrameCaptureProvider());
         var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "usb-hd-cam-01", "capture-test");
         var settings = new CaptureSettings(8, true, true, "Mata-10mm-grid", "diffuse");
 
@@ -24,7 +24,7 @@ public class CaptureServiceTests
     [Fact]
     public async Task CaptureAsync_FallsBackToAvailableCameraWhenRequestedNotFound()
     {
-        var service = new CaptureService();
+        var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockFrameCaptureProvider());
         var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "missing-camera", "capture-test");
         var settings = new CaptureSettings(5, true, false, "Mata-10mm-grid", "diffuse");
 

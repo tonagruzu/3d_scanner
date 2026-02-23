@@ -12,25 +12,33 @@ public sealed class CaptureService : ICaptureService
         ICameraDeviceDiscovery? cameraDeviceDiscovery = null,
         IFrameCaptureProvider? frameCaptureProvider = null)
     {
-        _cameraDeviceDiscovery = cameraDeviceDiscovery ?? new MockCameraDeviceDiscovery();
+        _cameraDeviceDiscovery = cameraDeviceDiscovery ?? CreateDefaultDeviceDiscovery();
         _frameCaptureProvider = frameCaptureProvider ?? new MockFrameCaptureProvider();
+    }
+
+    private static ICameraDeviceDiscovery CreateDefaultDeviceDiscovery()
+    {
+        return OperatingSystem.IsWindows()
+            ? new CompositeCameraDeviceDiscovery(new WindowsCameraDeviceDiscovery(), new MockCameraDeviceDiscovery())
+            : new MockCameraDeviceDiscovery();
     }
 
     public async Task<CaptureResult> CaptureAsync(ScanSession session, CaptureSettings settings, CancellationToken cancellationToken = default)
     {
         var devices = await _cameraDeviceDiscovery.GetAvailableDevicesAsync(cancellationToken);
 
-        var selectedDeviceId = devices
+        var selectedDevice = devices
             .Where(device => device.IsAvailable)
-            .Select(device => device.DeviceId)
-            .FirstOrDefault(deviceId => string.Equals(deviceId, session.CameraDeviceId, StringComparison.OrdinalIgnoreCase))
-            ?? devices.FirstOrDefault(device => device.IsAvailable)?.DeviceId
-            ?? session.CameraDeviceId;
+            .FirstOrDefault(device => string.Equals(device.DeviceId, session.CameraDeviceId, StringComparison.OrdinalIgnoreCase))
+            ?? devices.FirstOrDefault(device => device.IsAvailable);
+
+        var selectedDeviceId = selectedDevice?.DeviceId ?? session.CameraDeviceId;
+        var selectedDeviceName = selectedDevice?.DisplayName ?? "SessionCameraFallback";
 
         var frames = await _frameCaptureProvider.CaptureFramesAsync(selectedDeviceId, settings.TargetFrameCount, cancellationToken);
 
         var acceptedFrameCount = frames.Count(frame => frame.Accepted);
-        var notes = $"Capture settings: lockExposure={settings.LockExposure}, lockWhiteBalance={settings.LockWhiteBalance}, underlay={settings.UnderlayPattern}, lighting={settings.LightingProfile}";
+        var notes = $"device={selectedDeviceName}; lockExposure={settings.LockExposure}; lockWhiteBalance={settings.LockWhiteBalance}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
 
         return new CaptureResult(
             CameraDeviceId: selectedDeviceId,
