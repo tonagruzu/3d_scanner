@@ -16,7 +16,7 @@ public class PipelineOrchestratorTests
         var result = await orchestrator.ExecuteAsync(session);
 
         var expectedSuccess = result.Capture.ReliabilityTargetMet
-            && result.Calibration.IsWithinTolerance
+            && result.CalibrationQuality.GatePass
             && result.UnderlayVerification.Pass
             && result.Validation.Pass;
         Assert.Equal(expectedSuccess, result.Success);
@@ -26,7 +26,8 @@ public class PipelineOrchestratorTests
         Assert.All(result.SketchPaths, sketchPath => Assert.True(File.Exists(sketchPath)));
         Assert.False(string.IsNullOrWhiteSpace(result.Capture.CameraDeviceId));
         Assert.True(result.Capture.CapturedFrameCount >= 3);
-        Assert.True(result.Calibration.IsWithinTolerance);
+        Assert.Equal(result.CalibrationQuality.GatePass, result.CalibrationQuality.GateFailures.Count == 0);
+        Assert.True(result.CalibrationQuality.UsedIntrinsicFrames >= 0);
         Assert.True(result.UnderlayVerification.Performed);
         Assert.True(result.UnderlayVerification.Pass);
         Assert.False(string.IsNullOrWhiteSpace(result.UnderlayVerification.DetectionMode));
@@ -114,6 +115,13 @@ public class PipelineOrchestratorTests
 
             var reprojectionSamples = calibrationQuality.GetProperty("reprojectionResidualSamplesPx");
             Assert.True(reprojectionSamples.GetArrayLength() >= 3);
+            var calibrationGatePass = calibrationQuality.GetProperty("gatePass").GetBoolean();
+            var gateFailuresLength = calibrationQuality.GetProperty("gateFailures").GetArrayLength();
+            Assert.Equal(calibrationGatePass, gateFailuresLength == 0);
+            Assert.True(calibrationQuality.GetProperty("usedIntrinsicFrames").GetInt32() >= 0);
+            Assert.True(calibrationQuality.GetProperty("minimumRequiredIntrinsicFrames").GetInt32() >= 1);
+            Assert.InRange(calibrationQuality.GetProperty("underlayScaleConfidence").GetDouble(), 0.0, 1.0);
+            Assert.InRange(calibrationQuality.GetProperty("underlayPoseQuality").GetDouble(), 0.0, 1.0);
         }
 
         var outputDirectory = Path.GetDirectoryName(result.ValidationReportPath);

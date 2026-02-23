@@ -44,15 +44,6 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var calibration = await calibrationService.CalibrateAsync(session, capture, cancellationToken);
         var residualSamples = await calibrationResidualProvider.GetResidualSamplesAsync(calibration.CalibrationProfileId, capture, cancellationToken);
 
-        var calibrationQuality = new CalibrationQualitySummary(
-            ReprojectionErrorPx: calibration.ReprojectionErrorPx,
-            ScaleErrorMm: calibration.ScaleErrorMm,
-            ReprojectionResidualSamplesPx: residualSamples.ReprojectionResidualSamplesPx,
-            ScaleResidualSamplesMm: residualSamples.ScaleResidualSamplesMm,
-            Summary: calibration.IsWithinTolerance
-                ? "Calibration quality is within configured tolerance limits."
-                : "Calibration quality is outside tolerance limits.");
-
         var captureQuality = captureQualityAnalyzer.Analyze(capture);
 
         var expectedUnderlayBoxSizeMm = 10.0;
@@ -65,6 +56,44 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             scaleConfidence: underlayEstimate.ScaleConfidence,
             poseQuality: underlayEstimate.PoseQuality,
             toleranceMm: 0.2);
+
+        var usedIntrinsicFrames = calibration.IntrinsicCalibration?.UsedFrameIds.Count ?? 0;
+        var calibrationGateFailures = new List<string>();
+        if (usedIntrinsicFrames < CalibrationGateThresholds.MinUsableIntrinsicFrames)
+        {
+            calibrationGateFailures.Add($"intrinsic_frames={usedIntrinsicFrames} < {CalibrationGateThresholds.MinUsableIntrinsicFrames}");
+        }
+
+        if (calibration.ReprojectionErrorPx > CalibrationGateThresholds.MaxReprojectionErrorPx)
+        {
+            calibrationGateFailures.Add($"reprojection_error={calibration.ReprojectionErrorPx:0.###} > {CalibrationGateThresholds.MaxReprojectionErrorPx:0.###}");
+        }
+
+        if (underlayVerification.ScaleConfidence < CalibrationGateThresholds.MinUnderlayScaleConfidence)
+        {
+            calibrationGateFailures.Add($"scale_confidence={underlayVerification.ScaleConfidence:0.###} < {CalibrationGateThresholds.MinUnderlayScaleConfidence:0.###}");
+        }
+
+        if (underlayVerification.PoseQuality < CalibrationGateThresholds.MinUnderlayPoseQuality)
+        {
+            calibrationGateFailures.Add($"pose_quality={underlayVerification.PoseQuality:0.###} < {CalibrationGateThresholds.MinUnderlayPoseQuality:0.###}");
+        }
+
+        var calibrationGatePass = calibrationGateFailures.Count == 0;
+        var calibrationQuality = new CalibrationQualitySummary(
+            ReprojectionErrorPx: calibration.ReprojectionErrorPx,
+            ScaleErrorMm: calibration.ScaleErrorMm,
+            ReprojectionResidualSamplesPx: residualSamples.ReprojectionResidualSamplesPx,
+            ScaleResidualSamplesMm: residualSamples.ScaleResidualSamplesMm,
+            GatePass: calibrationGatePass,
+            GateFailures: calibrationGateFailures,
+            UsedIntrinsicFrames: usedIntrinsicFrames,
+            MinimumRequiredIntrinsicFrames: CalibrationGateThresholds.MinUsableIntrinsicFrames,
+            UnderlayScaleConfidence: underlayVerification.ScaleConfidence,
+            UnderlayPoseQuality: underlayVerification.PoseQuality,
+            Summary: calibrationGatePass
+                ? "Calibration quality gates passed."
+                : $"Calibration quality gate failed: {string.Join("; ", calibrationGateFailures)}");
 
         const double toleranceMm = 0.5;
         var measurementProfile = new MeasurementProfile(
@@ -99,10 +128,10 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var sketches = await sketchService.GenerateOrthographicSketchesAsync(session.SessionId, measurements, outputDirectory, cancellationToken);
 
         var captureGatePass = capture.ReliabilityTargetMet;
-        var success = captureGatePass && calibration.IsWithinTolerance && underlayVerification.Pass && validation.Pass;
+        var success = captureGatePass && calibrationGatePass && underlayVerification.Pass && validation.Pass;
         var message = success
             ? "Pipeline stub executed. Capture, underlay, calibration, and dimensional checks are within configured tolerances."
-            : $"Pipeline stub executed with failed quality gates. Review capture, underlay, calibration, and validation outputs. Capture gate detail: {capture.ReliabilityFailureReason ?? "n/a"}";
+            : $"Pipeline stub executed with failed quality gates. Capture gate detail: {capture.ReliabilityFailureReason ?? "n/a"}; Calibration gate detail: {(calibrationGatePass ? "passed" : string.Join(" | ", calibrationGateFailures))}; Underlay pass: {underlayVerification.Pass}; Validation pass: {validation.Pass}";
 
         var qualityReport = new ScanQualityReport(
             SessionId: session.SessionId,
@@ -122,6 +151,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             CapturePreflight: capturePreflight,
             Capture: capture,
             Calibration: calibration,
+            CalibrationQuality: calibrationQuality,
             UnderlayVerification: underlayVerification,
             Validation: validation,
             MeshPath: meshPath,

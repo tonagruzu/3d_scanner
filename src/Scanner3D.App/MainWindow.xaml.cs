@@ -13,7 +13,7 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
-    private const string GuiVersion = "v1.9.0";
+    private const string GuiVersion = "v2.0.0";
 
     private sealed record CameraOption(string DeviceId, string DisplayName)
     {
@@ -282,7 +282,7 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
         ValidationSummaryTextBlock.Text = result.Validation.Summary;
         PreflightSummaryTextBlock.Text = BuildPreflightUiSummary(result.CapturePreflight, result.Capture);
-        CalibrationSummaryTextBlock.Text = BuildCalibrationUiSummary(result.Calibration);
+        CalibrationSummaryTextBlock.Text = BuildCalibrationUiSummary(result.Calibration, result.CalibrationQuality);
         UnderlaySummaryTextBlock.Text = BuildUnderlayUiSummary(result.UnderlayVerification);
         DisplayFramePreview(result.Capture);
 
@@ -359,6 +359,17 @@ public partial class MainWindow : Window
         builder.AppendLine($"- Profile: {result.Calibration.CalibrationProfileId}");
         builder.AppendLine($"- Reprojection error (px): {result.Calibration.ReprojectionErrorPx:0.###}");
         builder.AppendLine($"- Scale error (mm): {result.Calibration.ScaleErrorMm:0.###}");
+        builder.AppendLine($"- Gate pass: {result.CalibrationQuality.GatePass}");
+        builder.AppendLine($"- Intrinsic frames used: {result.CalibrationQuality.UsedIntrinsicFrames}/{result.CalibrationQuality.MinimumRequiredIntrinsicFrames}");
+        builder.AppendLine($"- Underlay scale confidence: {result.CalibrationQuality.UnderlayScaleConfidence:0.###} (min {CalibrationGateThresholds.MinUnderlayScaleConfidence:0.###})");
+        builder.AppendLine($"- Underlay pose quality: {result.CalibrationQuality.UnderlayPoseQuality:0.###} (min {CalibrationGateThresholds.MinUnderlayPoseQuality:0.###})");
+        if (result.CalibrationQuality.GateFailures.Count > 0)
+        {
+            foreach (var failure in result.CalibrationQuality.GateFailures)
+            {
+                builder.AppendLine($"- Calibration gate failure: {failure}");
+            }
+        }
         if (result.Calibration.IntrinsicCalibration is not null)
         {
             var intrinsic = result.Calibration.IntrinsicCalibration;
@@ -439,6 +450,17 @@ public partial class MainWindow : Window
         }
 
         return $"reproj={calibration.ReprojectionErrorPx:0.###} px | scale={calibration.ScaleErrorMm:0.###} mm | intrinsic={intrinsic.PatternType} | used={intrinsic.UsedFrameIds.Count} rejected={intrinsic.RejectedFrameReasons.Count}";
+    }
+
+    private static string BuildCalibrationUiSummary(CalibrationResult calibration, CalibrationQualitySummary calibrationQuality)
+    {
+        var intrinsicSummary = BuildCalibrationUiSummary(calibration);
+        var gateStatus = calibrationQuality.GatePass ? "gate=PASS" : "gate=FAIL";
+        var gateDetails = calibrationQuality.GateFailures.Count == 0
+            ? string.Empty
+            : $" | issues={string.Join(", ", calibrationQuality.GateFailures)}";
+
+        return $"{intrinsicSummary} | {gateStatus}{gateDetails}";
     }
 
     private static string BuildUnderlayUiSummary(UnderlayVerificationResult underlay)

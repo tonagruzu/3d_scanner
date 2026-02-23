@@ -5,6 +5,7 @@ public sealed record PipelineResult(
     CapturePreflightResult? CapturePreflight,
     CaptureResult Capture,
     CalibrationResult Calibration,
+    CalibrationQualitySummary CalibrationQuality,
     UnderlayVerificationResult UnderlayVerification,
     ValidationReport Validation,
     string MeshPath,
