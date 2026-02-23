@@ -28,6 +28,10 @@ public class PipelineOrchestratorTests
         Assert.True(result.Capture.CapturedFrameCount >= 3);
         Assert.Equal(result.CalibrationQuality.GatePass, result.CalibrationQuality.GateFailures.Count == 0);
         Assert.True(result.CalibrationQuality.UsedIntrinsicFrames >= 0);
+        Assert.True(result.CalibrationQuality.IntrinsicFramesEvaluated >= 0);
+        Assert.True(result.CalibrationQuality.IntrinsicFramesRejected >= 0);
+        Assert.True(result.CalibrationQuality.IntrinsicFramesRejected <= result.CalibrationQuality.IntrinsicFramesEvaluated);
+        Assert.NotNull(result.CalibrationQuality.IntrinsicFrameDiagnostics);
         Assert.True(result.UnderlayVerification.Performed);
         Assert.True(result.UnderlayVerification.Pass);
         Assert.False(string.IsNullOrWhiteSpace(result.UnderlayVerification.DetectionMode));
@@ -120,6 +124,11 @@ public class PipelineOrchestratorTests
             Assert.Equal(calibrationGatePass, gateFailuresLength == 0);
             Assert.True(calibrationQuality.GetProperty("usedIntrinsicFrames").GetInt32() >= 0);
             Assert.True(calibrationQuality.GetProperty("minimumRequiredIntrinsicFrames").GetInt32() >= 1);
+            Assert.True(calibrationQuality.GetProperty("intrinsicFramesEvaluated").GetInt32() >= 0);
+            Assert.True(calibrationQuality.GetProperty("intrinsicFramesRejected").GetInt32() >= 0);
+            Assert.True(calibrationQuality.GetProperty("intrinsicRejectedFramesByReason").ValueKind == JsonValueKind.Object);
+            Assert.True(calibrationQuality.GetProperty("intrinsicRejectedFramesByCategory").ValueKind == JsonValueKind.Object);
+            Assert.True(calibrationQuality.GetProperty("intrinsicFrameDiagnostics").ValueKind == JsonValueKind.Array);
             Assert.InRange(calibrationQuality.GetProperty("underlayScaleConfidence").GetDouble(), 0.0, 1.0);
             Assert.InRange(calibrationQuality.GetProperty("underlayPoseQuality").GetDouble(), 0.0, 1.0);
         }

@@ -77,12 +77,45 @@ public class CalibrationServiceTests
             Assert.Equal(6, result.IntrinsicCalibration.PatternRows);
             Assert.True(result.IntrinsicCalibration.CameraMatrix.Count == 9);
             Assert.True(result.IntrinsicCalibration.UsedFrameIds.Count >= 3);
+            Assert.NotNull(result.IntrinsicDiagnostics);
+            Assert.True(result.IntrinsicDiagnostics!.TotalFramesEvaluated >= 3);
+            Assert.True(result.IntrinsicDiagnostics.UsableFrames >= 3);
+            Assert.Empty(result.IntrinsicDiagnostics.RejectedFramesByReason);
         }
         finally
         {
             DeleteFileIfExists(preview1);
             DeleteFileIfExists(preview2);
             DeleteFileIfExists(preview3);
+        }
+    }
+
+    [Fact]
+    public async Task CalibrateAsync_PopulatesIntrinsicDiagnosticsReasons_WhenFramesAreRejected()
+    {
+        var service = new CalibrationService();
+        var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "usb-hd-cam-01", "calibration-test");
+        var validPreview = CreateCheckerboardPreviewImage();
+
+        try
+        {
+            var capture = BuildCaptureResult(
+                new CaptureFrame("ok-001", DateTimeOffset.UtcNow, 100, 0.95, 0.90, true, validPreview),
+                new CaptureFrame("missing-001", DateTimeOffset.UtcNow, 200, 0.94, 0.88, true, ""),
+                new CaptureFrame("missing-002", DateTimeOffset.UtcNow, 300, 0.93, 0.87, true, null));
+
+            var result = await service.CalibrateAsync(session, capture);
+
+            Assert.NotNull(result.IntrinsicDiagnostics);
+            Assert.Equal(3, result.IntrinsicDiagnostics!.TotalFramesEvaluated);
+            Assert.Equal(2, result.IntrinsicDiagnostics.RejectedFrames);
+            Assert.Equal(2, result.IntrinsicDiagnostics.RejectedFramesByReason["preview_missing"]);
+            Assert.Equal(2, result.IntrinsicDiagnostics.RejectedFramesByCategory["input_missing"]);
+            Assert.Equal(3, result.IntrinsicDiagnostics.FrameDiagnostics.Count);
+        }
+        finally
+        {
+            DeleteFileIfExists(validPreview);
         }
     }
 

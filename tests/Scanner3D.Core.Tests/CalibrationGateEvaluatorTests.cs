@@ -61,7 +61,10 @@ public class CalibrationGateEvaluatorTests
             CameraMatrix: [800, 0, 640, 0, 800, 360, 0, 0, 1],
             DistortionCoefficients: [0, 0, 0, 0, 0],
             UsedFrameIds: used,
-            RejectedFrameReasons: []);
+            RejectedFrameReasons: [],
+            RejectedFrameReasonCounts: new Dictionary<string, int>(),
+            RejectedFrameCategoryCounts: new Dictionary<string, int>(),
+            FrameDiagnostics: used.Select(frameId => new IntrinsicFrameInclusionDiagnostic(frameId, true, "used_for_intrinsics", "included")).ToList());
 
         return new CalibrationResult(
             CalibrationProfileId: "calib-test",

@@ -13,7 +13,7 @@ namespace Scanner3D.App;
 
 public partial class MainWindow : Window
 {
-    private const string GuiVersion = "v2.0.0";
+    private const string GuiVersion = "v2.1.0";
 
     private sealed record CameraOption(string DeviceId, string DisplayName)
     {
@@ -361,8 +361,14 @@ public partial class MainWindow : Window
         builder.AppendLine($"- Scale error (mm): {result.Calibration.ScaleErrorMm:0.###}");
         builder.AppendLine($"- Gate pass: {result.CalibrationQuality.GatePass}");
         builder.AppendLine($"- Intrinsic frames used: {result.CalibrationQuality.UsedIntrinsicFrames}/{result.CalibrationQuality.MinimumRequiredIntrinsicFrames}");
+        builder.AppendLine($"- Intrinsic frames evaluated/rejected: {result.CalibrationQuality.IntrinsicFramesEvaluated}/{result.CalibrationQuality.IntrinsicFramesRejected}");
         builder.AppendLine($"- Underlay scale confidence: {result.CalibrationQuality.UnderlayScaleConfidence:0.###} (min {CalibrationGateThresholds.MinUnderlayScaleConfidence:0.###})");
         builder.AppendLine($"- Underlay pose quality: {result.CalibrationQuality.UnderlayPoseQuality:0.###} (min {CalibrationGateThresholds.MinUnderlayPoseQuality:0.###})");
+        if (result.CalibrationQuality.IntrinsicRejectedFramesByCategory.Count > 0)
+        {
+            var categorySummary = string.Join(", ", result.CalibrationQuality.IntrinsicRejectedFramesByCategory.OrderBy(item => item.Key).Select(item => $"{item.Key}={item.Value}"));
+            builder.AppendLine($"- Intrinsic rejected by category: {categorySummary}");
+        }
         if (result.CalibrationQuality.GateFailures.Count > 0)
         {
             foreach (var failure in result.CalibrationQuality.GateFailures)
@@ -456,11 +462,12 @@ public partial class MainWindow : Window
     {
         var intrinsicSummary = BuildCalibrationUiSummary(calibration);
         var gateStatus = calibrationQuality.GatePass ? "gate=PASS" : "gate=FAIL";
+        var intrinsicDiagnostics = $" | intrinsic_eval={calibrationQuality.IntrinsicFramesEvaluated} rejected={calibrationQuality.IntrinsicFramesRejected}";
         var gateDetails = calibrationQuality.GateFailures.Count == 0
             ? string.Empty
             : $" | issues={string.Join(", ", calibrationQuality.GateFailures)}";
 
-        return $"{intrinsicSummary} | {gateStatus}{gateDetails}";
+        return $"{intrinsicSummary} | {gateStatus}{intrinsicDiagnostics}{gateDetails}";
     }
 
     private static string BuildUnderlayUiSummary(UnderlayVerificationResult underlay)

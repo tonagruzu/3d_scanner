@@ -7,4 +7,5 @@ public sealed record CalibrationResult(
     double ScaleErrorMm,
     bool IsWithinTolerance,
     string Notes,
-    IntrinsicCalibrationDetails? IntrinsicCalibration = null);
+    IntrinsicCalibrationDetails? IntrinsicCalibration = null,
+    IntrinsicDiagnosticsSummary? IntrinsicDiagnostics = null);

@@ -10,4 +10,7 @@ public sealed record IntrinsicCalibrationDetails(
     IReadOnlyList<double> CameraMatrix,
     IReadOnlyList<double> DistortionCoefficients,
     IReadOnlyList<string> UsedFrameIds,
-    IReadOnlyList<string> RejectedFrameReasons);
+    IReadOnlyList<string> RejectedFrameReasons,
+    IReadOnlyDictionary<string, int> RejectedFrameReasonCounts,
+    IReadOnlyDictionary<string, int> RejectedFrameCategoryCounts,
+    IReadOnlyList<IntrinsicFrameInclusionDiagnostic> FrameDiagnostics);

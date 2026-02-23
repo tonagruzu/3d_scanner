@@ -61,6 +61,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             toleranceMm: 0.2);
 
         var usedIntrinsicFrames = calibration.IntrinsicCalibration?.UsedFrameIds.Count ?? 0;
+        var intrinsicDiagnostics = calibration.IntrinsicDiagnostics;
         var requireIntrinsicFrames = IsStrictIntrinsicGateRequired(session);
         var calibrationGateFailures = CalibrationGateEvaluator.Evaluate(
             calibration,
@@ -78,6 +79,11 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             GateFailures: calibrationGateFailures,
             UsedIntrinsicFrames: usedIntrinsicFrames,
             MinimumRequiredIntrinsicFrames: CalibrationGateThresholds.MinUsableIntrinsicFrames,
+            IntrinsicFramesEvaluated: intrinsicDiagnostics?.TotalFramesEvaluated ?? 0,
+            IntrinsicFramesRejected: intrinsicDiagnostics?.RejectedFrames ?? 0,
+            IntrinsicRejectedFramesByReason: intrinsicDiagnostics?.RejectedFramesByReason ?? new Dictionary<string, int>(),
+            IntrinsicRejectedFramesByCategory: intrinsicDiagnostics?.RejectedFramesByCategory ?? new Dictionary<string, int>(),
+            IntrinsicFrameDiagnostics: intrinsicDiagnostics?.FrameDiagnostics ?? [],
             UnderlayScaleConfidence: underlayVerification.ScaleConfidence,
             UnderlayPoseQuality: underlayVerification.PoseQuality,
             Summary: calibrationGatePass

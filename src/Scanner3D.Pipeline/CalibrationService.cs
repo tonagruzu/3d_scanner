@@ -13,7 +13,12 @@ public sealed class CalibrationService : ICalibrationService
 
     public Task<CalibrationResult> CalibrateAsync(ScanSession session, CaptureResult? captureResult = null, CancellationToken cancellationToken = default)
     {
-        var intrinsics = TryCalibrateIntrinsics(captureResult, out var checkerboardReprojectionErrorPx, out var checkerboardScaleErrorMm, out var usedFrames);
+        var intrinsics = TryCalibrateIntrinsics(
+            captureResult,
+            out var checkerboardReprojectionErrorPx,
+            out var checkerboardScaleErrorMm,
+            out var usedFrames,
+            out var intrinsicDiagnostics);
         var hasIntrinsics = intrinsics is not null;
 
         var (reprojectionErrorPx, scaleErrorMm, mode) = hasIntrinsics
@@ -30,7 +35,8 @@ public sealed class CalibrationService : ICalibrationService
             Notes: isWithinTolerance
                 ? $"Calibration completed within configured tolerances ({mode})."
                 : $"Calibration exceeded configured tolerances ({mode}).",
-            IntrinsicCalibration: intrinsics);
+            IntrinsicCalibration: intrinsics,
+            IntrinsicDiagnostics: intrinsicDiagnostics);
 
         return Task.FromResult(result);
     }
@@ -39,7 +45,8 @@ public sealed class CalibrationService : ICalibrationService
         CaptureResult? captureResult,
         out double reprojectionErrorPx,
         out double scaleErrorMm,
-        out int usedFrames)
+        out int usedFrames,
+        out IntrinsicDiagnosticsSummary diagnostics)
     {
         reprojectionErrorPx = 0;
         scaleErrorMm = 0;
@@ -47,6 +54,13 @@ public sealed class CalibrationService : ICalibrationService
 
         if (captureResult is null || captureResult.Frames.Count == 0)
         {
+            diagnostics = new IntrinsicDiagnosticsSummary(
+                TotalFramesEvaluated: 0,
+                UsableFrames: 0,
+                RejectedFrames: 0,
+                RejectedFramesByReason: new Dictionary<string, int>(),
+                RejectedFramesByCategory: new Dictionary<string, int>(),
+                FrameDiagnostics: []);
             return null;
         }
 
@@ -54,6 +68,7 @@ public sealed class CalibrationService : ICalibrationService
         var imagePoints = new List<Point2f[]>();
         var usedFrameIds = new List<string>();
         var rejectedFrameReasons = new List<string>();
+        var frameDiagnostics = new List<IntrinsicFrameInclusionDiagnostic>();
         Size? imageSize = null;
         var objectPatternPoints = BuildCheckerboardObjectPoints();
 
@@ -62,6 +77,7 @@ public sealed class CalibrationService : ICalibrationService
             if (string.IsNullOrWhiteSpace(frame.PreviewImagePath) || !File.Exists(frame.PreviewImagePath))
             {
                 rejectedFrameReasons.Add($"{frame.FrameId}:preview_missing");
+                frameDiagnostics.Add(CreateRejectedDiagnostic(frame.FrameId, "preview_missing"));
                 continue;
             }
 
@@ -71,6 +87,7 @@ public sealed class CalibrationService : ICalibrationService
                 if (image.Empty())
                 {
                     rejectedFrameReasons.Add($"{frame.FrameId}:image_read_failed");
+                    frameDiagnostics.Add(CreateRejectedDiagnostic(frame.FrameId, "image_read_failed"));
                     continue;
                 }
 
@@ -85,6 +102,7 @@ public sealed class CalibrationService : ICalibrationService
                 if (!found)
                 {
                     rejectedFrameReasons.Add($"{frame.FrameId}:corners_not_found");
+                    frameDiagnostics.Add(CreateRejectedDiagnostic(frame.FrameId, "corners_not_found"));
                     continue;
                 }
 
@@ -98,12 +116,20 @@ public sealed class CalibrationService : ICalibrationService
                 imagePoints.Add(corners);
                 objectPoints.Add(objectPatternPoints);
                 usedFrameIds.Add(frame.FrameId);
+                frameDiagnostics.Add(new IntrinsicFrameInclusionDiagnostic(
+                    FrameId: frame.FrameId,
+                    Included: true,
+                    ReasonCode: "used_for_intrinsics",
+                    ReasonCategory: "included"));
             }
             catch
             {
                 rejectedFrameReasons.Add($"{frame.FrameId}:processing_error");
+                frameDiagnostics.Add(CreateRejectedDiagnostic(frame.FrameId, "processing_error"));
             }
         }
+
+        diagnostics = BuildIntrinsicDiagnosticsSummary(frameDiagnostics);
 
         if (imagePoints.Count < 3 || imageSize is null)
         {
@@ -180,8 +206,54 @@ public sealed class CalibrationService : ICalibrationService
             CameraMatrix: matrixValues,
             DistortionCoefficients: distortionValues,
             UsedFrameIds: usedFrameIds,
-            RejectedFrameReasons: rejectedFrameReasons);
+            RejectedFrameReasons: rejectedFrameReasons,
+            RejectedFrameReasonCounts: diagnostics.RejectedFramesByReason,
+            RejectedFrameCategoryCounts: diagnostics.RejectedFramesByCategory,
+            FrameDiagnostics: frameDiagnostics);
     }
+
+    private static IntrinsicFrameInclusionDiagnostic CreateRejectedDiagnostic(string frameId, string reasonCode)
+        => new(
+            FrameId: frameId,
+            Included: false,
+            ReasonCode: reasonCode,
+            ReasonCategory: MapReasonCategory(reasonCode));
+
+    private static IntrinsicDiagnosticsSummary BuildIntrinsicDiagnosticsSummary(IReadOnlyList<IntrinsicFrameInclusionDiagnostic> frameDiagnostics)
+    {
+        var rejected = frameDiagnostics.Where(item => !item.Included).ToList();
+
+        var byReason = rejected
+            .GroupBy(item => item.ReasonCode)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+
+        var byCategory = rejected
+            .GroupBy(item => item.ReasonCategory)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+
+        var usable = frameDiagnostics.Count(item => item.Included);
+        var rejectedCount = rejected.Count;
+
+        return new IntrinsicDiagnosticsSummary(
+            TotalFramesEvaluated: frameDiagnostics.Count,
+            UsableFrames: usable,
+            RejectedFrames: rejectedCount,
+            RejectedFramesByReason: byReason,
+            RejectedFramesByCategory: byCategory,
+            FrameDiagnostics: frameDiagnostics);
+    }
+
+    private static string MapReasonCategory(string reasonCode)
+        => reasonCode switch
+        {
+            "preview_missing" => "input_missing",
+            "image_read_failed" => "image_io",
+            "corners_not_found" => "detection_failure",
+            "processing_error" => "processing_error",
+            _ => "other"
+        };
 
     private static Point3f[] BuildCheckerboardObjectPoints()
     {

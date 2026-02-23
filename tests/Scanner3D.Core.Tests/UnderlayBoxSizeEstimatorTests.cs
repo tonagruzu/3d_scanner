@@ -83,7 +83,15 @@ public class UnderlayBoxSizeEstimatorTests
                 ],
                 DistortionCoefficients: [0, 0, 0, 0, 0],
                 UsedFrameIds: ["f-001", "f-002", "f-003"],
-                RejectedFrameReasons: []);
+                RejectedFrameReasons: [],
+                RejectedFrameReasonCounts: new Dictionary<string, int>(),
+                RejectedFrameCategoryCounts: new Dictionary<string, int>(),
+                FrameDiagnostics:
+                [
+                    new IntrinsicFrameInclusionDiagnostic("f-001", true, "used_for_intrinsics", "included"),
+                    new IntrinsicFrameInclusionDiagnostic("f-002", true, "used_for_intrinsics", "included"),
+                    new IntrinsicFrameInclusionDiagnostic("f-003", true, "used_for_intrinsics", "included")
+                ]);
 
             var estimate = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, intrinsics, targetSamples: 5);
 

@@ -9,6 +9,11 @@ public sealed record CalibrationQualitySummary(
     IReadOnlyList<string> GateFailures,
     int UsedIntrinsicFrames,
     int MinimumRequiredIntrinsicFrames,
+    int IntrinsicFramesEvaluated,
+    int IntrinsicFramesRejected,
+    IReadOnlyDictionary<string, int> IntrinsicRejectedFramesByReason,
+    IReadOnlyDictionary<string, int> IntrinsicRejectedFramesByCategory,
+    IReadOnlyList<IntrinsicFrameInclusionDiagnostic> IntrinsicFrameDiagnostics,
     double UnderlayScaleConfidence,
     double UnderlayPoseQuality,
     string Summary);
