@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using Scanner3D.Core.Models;
 using Scanner3D.Core.Services;
 
@@ -38,11 +39,11 @@ public partial class MainWindow : Window
             StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
             ValidationSummaryTextBlock.Text = result.Validation.Summary;
 
-            ArtifactListBox.Items.Add($"Mesh: {result.MeshPath}");
-            ArtifactListBox.Items.Add($"Validation: {result.ValidationReportPath}");
+            AddArtifactListItem("Mesh", result.MeshPath);
+            AddArtifactListItem("Validation", result.ValidationReportPath);
             foreach (var sketchPath in result.SketchPaths)
             {
-                ArtifactListBox.Items.Add($"Sketch: {sketchPath}");
+                AddArtifactListItem("Sketch", sketchPath);
             }
 
             _latestOutputDirectory = Path.GetDirectoryName(result.MeshPath);
@@ -70,5 +71,36 @@ public partial class MainWindow : Window
             FileName = _latestOutputDirectory,
             UseShellExecute = true
         });
+    }
+
+    private void ArtifactListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (ArtifactListBox.SelectedItem is not ListBoxItem listItem || listItem.Tag is not string artifactPath)
+        {
+            return;
+        }
+
+        if (!File.Exists(artifactPath))
+        {
+            MessageBox.Show($"File not found: {artifactPath}", "Open Artifact", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = artifactPath,
+            UseShellExecute = true
+        });
+    }
+
+    private void AddArtifactListItem(string artifactType, string artifactPath)
+    {
+        var item = new ListBoxItem
+        {
+            Content = $"{artifactType}: {Path.GetFileName(artifactPath)}",
+            Tag = artifactPath
+        };
+
+        ArtifactListBox.Items.Add(item);
     }
 }

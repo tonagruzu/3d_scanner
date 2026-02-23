@@ -24,7 +24,7 @@
                 <TextBlock x:Name="ValidationSummaryTextBlock" Text="No run yet" Margin="0,2,0,10" TextWrapping="Wrap"/>
 
                 <TextBlock Text="Artifacts" FontWeight="SemiBold"/>
-                <ListBox x:Name="ArtifactListBox" Height="170" />
+                <ListBox x:Name="ArtifactListBox" Height="170" MouseDoubleClick="ArtifactListBox_MouseDoubleClick" />
             </StackPanel>
         </Border>
 
