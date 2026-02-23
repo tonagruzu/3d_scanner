@@ -87,6 +87,16 @@ public class PipelineOrchestratorTests
             Assert.True(acceptedRatio >= 0);
             Assert.True(acceptedRatio <= 1);
 
+            var timestampCoverageRatio = captureQuality.GetProperty("timestampCoverageRatio").GetDouble();
+            Assert.True(timestampCoverageRatio >= 0);
+            Assert.True(timestampCoverageRatio <= 1);
+
+            var meanInterFrameIntervalMs = captureQuality.GetProperty("meanInterFrameIntervalMs").GetDouble();
+            Assert.True(meanInterFrameIntervalMs >= 0);
+
+            var interFrameIntervalJitterMs = captureQuality.GetProperty("interFrameIntervalJitterMs").GetDouble();
+            Assert.True(interFrameIntervalJitterMs >= 0);
+
             var reprojectionSamples = calibrationQuality.GetProperty("reprojectionResidualSamplesPx");
             Assert.True(reprojectionSamples.GetArrayLength() >= 3);
         }

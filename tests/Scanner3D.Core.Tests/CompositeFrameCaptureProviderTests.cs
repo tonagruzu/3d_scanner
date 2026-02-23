@@ -12,7 +12,7 @@ public class CompositeFrameCaptureProviderTests
     {
         var primaryFrames = new List<CaptureFrame>
         {
-            new("primary-f-001", DateTimeOffset.UtcNow, 0.9, 0.9, true)
+            new("primary-f-001", DateTimeOffset.UtcNow, 100, 0.9, 0.9, true)
         };
 
         var provider = new CompositeFrameCaptureProvider(
@@ -31,7 +31,7 @@ public class CompositeFrameCaptureProviderTests
     {
         var fallbackFrames = new List<CaptureFrame>
         {
-            new("fallback-f-001", DateTimeOffset.UtcNow, 0.85, 0.88, true)
+            new("fallback-f-001", DateTimeOffset.UtcNow, 100, 0.85, 0.88, true)
         };
 
         var provider = new CompositeFrameCaptureProvider(

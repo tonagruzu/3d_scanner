@@ -59,16 +59,16 @@ public class CaptureServiceTests
     {
         var firstAttemptFrames = new List<CaptureFrame>
         {
-            new CaptureFrame("a1-f1", DateTimeOffset.UtcNow, 0.9, 0.9, true),
-            new CaptureFrame("a1-f2", DateTimeOffset.UtcNow, 0.5, 0.5, false),
-            new CaptureFrame("a1-f3", DateTimeOffset.UtcNow, 0.5, 0.5, false)
+            new CaptureFrame("a1-f1", DateTimeOffset.UtcNow, 100, 0.9, 0.9, true),
+            new CaptureFrame("a1-f2", DateTimeOffset.UtcNow, 200, 0.5, 0.5, false),
+            new CaptureFrame("a1-f3", DateTimeOffset.UtcNow, 300, 0.5, 0.5, false)
         };
 
         var secondAttemptFrames = new List<CaptureFrame>
         {
-            new CaptureFrame("a2-f1", DateTimeOffset.UtcNow, 0.9, 0.9, true),
-            new CaptureFrame("a2-f2", DateTimeOffset.UtcNow, 0.9, 0.9, true),
-            new CaptureFrame("a2-f3", DateTimeOffset.UtcNow, 0.9, 0.9, true)
+            new CaptureFrame("a2-f1", DateTimeOffset.UtcNow, 100, 0.9, 0.9, true),
+            new CaptureFrame("a2-f2", DateTimeOffset.UtcNow, 200, 0.9, 0.9, true),
+            new CaptureFrame("a2-f3", DateTimeOffset.UtcNow, 300, 0.9, 0.9, true)
         };
 
         var sequenceProvider = new SequenceFrameProvider([
@@ -101,9 +101,9 @@ public class CaptureServiceTests
     {
         var weakAttemptFrames = new List<CaptureFrame>
         {
-            new CaptureFrame("w-f1", DateTimeOffset.UtcNow, 0.9, 0.9, true),
-            new CaptureFrame("w-f2", DateTimeOffset.UtcNow, 0.5, 0.5, false),
-            new CaptureFrame("w-f3", DateTimeOffset.UtcNow, 0.5, 0.5, false)
+            new CaptureFrame("w-f1", DateTimeOffset.UtcNow, 100, 0.9, 0.9, true),
+            new CaptureFrame("w-f2", DateTimeOffset.UtcNow, 200, 0.5, 0.5, false),
+            new CaptureFrame("w-f3", DateTimeOffset.UtcNow, 300, 0.5, 0.5, false)
         };
 
         var sequenceProvider = new SequenceFrameProvider([
@@ -141,7 +141,7 @@ public class CaptureServiceTests
         ]);
         var frameProvider = new RecordingFrameProvider(
         [
-            new CaptureFrame("f-001", DateTimeOffset.UtcNow, 0.9, 0.9, true)
+            new CaptureFrame("f-001", DateTimeOffset.UtcNow, 100, 0.9, 0.9, true)
         ]);
 
         var service = new CaptureService(
@@ -172,7 +172,7 @@ public class CaptureServiceTests
             ]),
             modeProvider,
             new RecordingFrameProvider([
-                new CaptureFrame("f-001", DateTimeOffset.UtcNow, 0.9, 0.9, true)
+                new CaptureFrame("f-001", DateTimeOffset.UtcNow, 100, 0.9, 0.9, true)
             ]));
 
         var result = await service.CaptureAsync(
@@ -188,7 +188,7 @@ public class CaptureServiceTests
     {
         var modeProvider = new RecordingModeProvider([new CameraCaptureMode(640, 480, 30, "Unknown")]);
         var frameProvider = new RecordingFrameProvider([
-            new CaptureFrame("session-cam-f-001", DateTimeOffset.UtcNow, 0.88, 0.86, true)
+            new CaptureFrame("session-cam-f-001", DateTimeOffset.UtcNow, 100, 0.88, 0.86, true)
         ]);
         var sessionCameraId = "session-cam-id";
 

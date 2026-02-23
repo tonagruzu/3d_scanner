@@ -25,6 +25,7 @@ public sealed class MockFrameCaptureProvider : IFrameCaptureProvider
             frames.Add(new CaptureFrame(
                 FrameId: $"{cameraDeviceId}-f-{index:000}",
                 CapturedAt: DateTimeOffset.UtcNow.AddMilliseconds(index * 100),
+                SourceTimestampMs: index * 100,
                 SharpnessScore: sharpness,
                 ExposureScore: exposure,
                 Accepted: accepted));

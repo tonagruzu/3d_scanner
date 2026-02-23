@@ -46,10 +46,12 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
                            && exposure >= CaptureQualityThresholds.ExposureMinForAcceptance;
             var frameId = $"opencv-cam-{index.Value}-f-{frameIndex:000}";
             var previewImagePath = SavePreviewFrame(frame, frameId);
+            var sourceTimestampMs = GetSourceTimestampMs(capture);
 
             frames.Add(new CaptureFrame(
                 FrameId: frameId,
                 CapturedAt: DateTimeOffset.UtcNow.AddMilliseconds(frameIndex * 80),
+                SourceTimestampMs: sourceTimestampMs,
                 SharpnessScore: sharpness,
                 ExposureScore: exposure,
                 Accepted: accepted,
@@ -130,6 +132,24 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
             var filePath = Path.Combine(previewDirectory, $"{frameId}-{Guid.NewGuid():N}.jpg");
             Cv2.ImWrite(filePath, frame);
             return filePath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static double? GetSourceTimestampMs(VideoCapture capture)
+    {
+        try
+        {
+            var value = capture.Get(VideoCaptureProperties.PosMsec);
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
+            {
+                return null;
+            }
+
+            return value;
         }
         catch
         {

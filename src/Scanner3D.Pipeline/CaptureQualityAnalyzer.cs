@@ -12,6 +12,27 @@ public sealed class CaptureQualityAnalyzer
 
         var meanSharpness = total == 0 ? 0 : captureResult.Frames.Average(frame => frame.SharpnessScore);
         var meanExposure = total == 0 ? 0 : captureResult.Frames.Average(frame => frame.ExposureScore);
+        var timestampedFrames = captureResult.Frames
+            .Where(frame => frame.SourceTimestampMs.HasValue)
+            .OrderBy(frame => frame.SourceTimestampMs!.Value)
+            .ToList();
+        var timestampCoverageRatio = total == 0 ? 0 : (double)timestampedFrames.Count / total;
+
+        var intervals = new List<double>();
+        for (var index = 1; index < timestampedFrames.Count; index++)
+        {
+            var delta = timestampedFrames[index].SourceTimestampMs!.Value
+                        - timestampedFrames[index - 1].SourceTimestampMs!.Value;
+            if (delta > 0)
+            {
+                intervals.Add(delta);
+            }
+        }
+
+        var meanInterFrameIntervalMs = intervals.Count == 0 ? 0 : intervals.Average();
+        var interFrameIntervalJitterMs = intervals.Count == 0
+            ? 0
+            : Math.Sqrt(intervals.Average(value => Math.Pow(value - meanInterFrameIntervalMs, 2)));
 
         var rejectedCount = total - accepted;
         var rejectionCounts = new Dictionary<string, int>
@@ -45,6 +66,16 @@ public sealed class CaptureQualityAnalyzer
             reliabilityWarnings.Add("Frame timestamps are not monotonic.");
         }
 
+        if (captureResult.CapturedFrameCount > 0 && timestampCoverageRatio < 1.0)
+        {
+            reliabilityWarnings.Add("Backend-native timestamps are missing for one or more frames.");
+        }
+
+        if (intervals.Count > 1 && interFrameIntervalJitterMs > 10)
+        {
+            reliabilityWarnings.Add("Inter-frame timing jitter exceeds 10 ms.");
+        }
+
         if (!captureResult.ReliabilityTargetMet)
         {
             reliabilityWarnings.Add(captureResult.ReliabilityFailureReason
@@ -65,6 +96,9 @@ public sealed class CaptureQualityAnalyzer
             AcceptedRatio: acceptedRatio,
             MeanSharpness: meanSharpness,
             MeanExposure: meanExposure,
+            TimestampCoverageRatio: timestampCoverageRatio,
+            MeanInterFrameIntervalMs: meanInterFrameIntervalMs,
+            InterFrameIntervalJitterMs: interFrameIntervalJitterMs,
             RejectionCounts: rejectionCounts,
             ReliabilityPass: reliabilityPass,
             ReliabilityWarnings: reliabilityWarnings,
