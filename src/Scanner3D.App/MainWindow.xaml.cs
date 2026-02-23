@@ -68,6 +68,7 @@ public partial class MainWindow : Window
                 CameraPickerComboBox.Items.Add(fallback);
                 CameraPickerComboBox.SelectedItem = fallback;
                 _selectedCameraDeviceId = fallback.DeviceId;
+                UpdateSelectedCameraText();
                 return;
             }
 
@@ -84,6 +85,7 @@ public partial class MainWindow : Window
 
             CameraPickerComboBox.SelectedValue = preferredSelection;
             _selectedCameraDeviceId = preferredSelection;
+            UpdateSelectedCameraText();
         }
         catch (Exception exception)
         {
@@ -94,6 +96,7 @@ public partial class MainWindow : Window
             _selectedCameraDeviceId = fallback.DeviceId;
             StatusTextBlock.Text = "Camera discovery failed";
             ValidationSummaryTextBlock.Text = exception.Message;
+            UpdateSelectedCameraText();
         }
     }
 
@@ -107,7 +110,19 @@ public partial class MainWindow : Window
         if (CameraPickerComboBox.SelectedItem is CameraOption option)
         {
             _selectedCameraDeviceId = option.DeviceId;
+            UpdateSelectedCameraText();
         }
+    }
+
+    private void UpdateSelectedCameraText()
+    {
+        if (CameraPickerComboBox.SelectedItem is CameraOption option)
+        {
+            SelectedCameraTextBlock.Text = $"Selected: {option.DisplayName}";
+            return;
+        }
+
+        SelectedCameraTextBlock.Text = "Selected: (none)";
     }
 
     private async void RunPipelineStub_Click(object sender, RoutedEventArgs e)

@@ -38,6 +38,7 @@
                     <ComboBox x:Name="CameraPickerComboBox" Height="28" DisplayMemberPath="DisplayName" SelectedValuePath="DeviceId" SelectionChanged="CameraPickerComboBox_SelectionChanged"/>
                     <Button x:Name="RefreshCamerasButton" Grid.Column="1" Margin="12,0,0,0" Width="110" Height="28" Content="Refresh" Click="RefreshCamerasButton_Click"/>
                 </Grid>
+                <TextBlock x:Name="SelectedCameraTextBlock" Text="Selected: (none)" Margin="0,4,0,0" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
