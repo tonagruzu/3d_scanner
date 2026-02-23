@@ -8,6 +8,8 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
     public async Task<PipelineResult> ExecuteAsync(ScanSession session, CancellationToken cancellationToken = default)
     {
         var captureService = new CaptureService();
+        var calibrationService = new CalibrationService();
+        var calibrationResidualProvider = new MockCalibrationResidualProvider();
         var underlayValidator = new UnderlayPatternValidator();
         var validationWriter = new JsonValidationReportWriter();
         var captureQualityAnalyzer = new CaptureQualityAnalyzer();
@@ -21,19 +23,14 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
 
         var capture = await captureService.CaptureAsync(session, captureSettings, cancellationToken);
 
-        var calibration = new CalibrationResult(
-            CalibrationProfileId: "calib-profile-bootstrap",
-            CalibratedAt: DateTimeOffset.UtcNow,
-            ReprojectionErrorPx: 0.42,
-            ScaleErrorMm: 0.12,
-            IsWithinTolerance: true,
-            Notes: "Stub calibration summary. Replace with real solve and scale checks.");
+        var calibration = await calibrationService.CalibrateAsync(session, cancellationToken);
+        var residualSamples = await calibrationResidualProvider.GetResidualSamplesAsync(calibration.CalibrationProfileId, cancellationToken);
 
         var calibrationQuality = new CalibrationQualitySummary(
             ReprojectionErrorPx: calibration.ReprojectionErrorPx,
             ScaleErrorMm: calibration.ScaleErrorMm,
-            ReprojectionResidualSamplesPx: new List<double> { 0.31, 0.44, 0.49, 0.42, 0.38 },
-            ScaleResidualSamplesMm: new List<double> { 0.08, 0.12, 0.10, 0.14, 0.11 },
+            ReprojectionResidualSamplesPx: residualSamples.ReprojectionResidualSamplesPx,
+            ScaleResidualSamplesMm: residualSamples.ScaleResidualSamplesMm,
             Summary: calibration.IsWithinTolerance
                 ? "Calibration quality is within configured tolerance limits."
                 : "Calibration quality is outside tolerance limits.");
