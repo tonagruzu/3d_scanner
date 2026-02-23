@@ -10,6 +10,7 @@ public sealed class CalibrationService : ICalibrationService
     private const double ScaleToleranceMm = 0.2;
     private static readonly Size CheckerboardPattern = new(9, 6);
     private const double CheckerSquareSizeMm = 10.0;
+    private const double MinCornerCoverageRatio = 0.06;
 
     public Task<CalibrationResult> CalibrateAsync(ScanSession session, CaptureResult? captureResult = null, CancellationToken cancellationToken = default)
     {
@@ -93,16 +94,11 @@ public sealed class CalibrationService : ICalibrationService
 
                 imageSize ??= image.Size();
 
-                var found = Cv2.FindChessboardCorners(
-                    image,
-                    CheckerboardPattern,
-                    out var corners,
-                    ChessboardFlags.AdaptiveThresh | ChessboardFlags.NormalizeImage | ChessboardFlags.FastCheck);
-
-                if (!found)
+                if (!TryFindCheckerboardCorners(image, out var corners, out var inclusionCode, out var rejectionReasonCode))
                 {
-                    rejectedFrameReasons.Add($"{frame.FrameId}:corners_not_found");
-                    frameDiagnostics.Add(CreateRejectedDiagnostic(frame.FrameId, "corners_not_found"));
+                    var resolvedReason = rejectionReasonCode ?? "corners_not_found";
+                    rejectedFrameReasons.Add($"{frame.FrameId}:{resolvedReason}");
+                    frameDiagnostics.Add(CreateRejectedDiagnostic(frame.FrameId, resolvedReason));
                     continue;
                 }
 
@@ -119,7 +115,7 @@ public sealed class CalibrationService : ICalibrationService
                 frameDiagnostics.Add(new IntrinsicFrameInclusionDiagnostic(
                     FrameId: frame.FrameId,
                     Included: true,
-                    ReasonCode: "used_for_intrinsics",
+                    ReasonCode: inclusionCode,
                     ReasonCategory: "included"));
             }
             catch
@@ -251,9 +247,80 @@ public sealed class CalibrationService : ICalibrationService
             "preview_missing" => "input_missing",
             "image_read_failed" => "image_io",
             "corners_not_found" => "detection_failure",
+            "corners_not_found_sb" => "detection_failure",
+            "corners_not_found_classic" => "detection_failure",
+            "corners_low_coverage" => "frame_quality",
             "processing_error" => "processing_error",
             _ => "other"
         };
+
+    private static bool TryFindCheckerboardCorners(
+        Mat image,
+        out Point2f[] corners,
+        out string inclusionCode,
+        out string? rejectionReasonCode)
+    {
+        corners = [];
+        inclusionCode = "used_for_intrinsics_checkerboard";
+        rejectionReasonCode = null;
+
+        var foundSb = Cv2.FindChessboardCornersSB(
+            image,
+            CheckerboardPattern,
+            out var sbCorners,
+            ChessboardFlags.Exhaustive | ChessboardFlags.Accuracy | ChessboardFlags.NormalizeImage);
+        if (foundSb)
+        {
+            if (!HasSufficientCornerCoverage(sbCorners, image.Size()))
+            {
+                rejectionReasonCode = "corners_low_coverage";
+                return false;
+            }
+
+            corners = sbCorners;
+            inclusionCode = "used_for_intrinsics_checkerboard_sb";
+            return true;
+        }
+
+        var foundClassic = Cv2.FindChessboardCorners(
+            image,
+            CheckerboardPattern,
+            out var classicCorners,
+            ChessboardFlags.AdaptiveThresh | ChessboardFlags.NormalizeImage | ChessboardFlags.FastCheck);
+        if (!foundClassic)
+        {
+            rejectionReasonCode = "corners_not_found_classic";
+            return false;
+        }
+
+        if (!HasSufficientCornerCoverage(classicCorners, image.Size()))
+        {
+            rejectionReasonCode = "corners_low_coverage";
+            return false;
+        }
+
+        corners = classicCorners;
+        inclusionCode = "used_for_intrinsics_checkerboard_classic";
+        return true;
+    }
+
+    private static bool HasSufficientCornerCoverage(IReadOnlyList<Point2f> corners, Size imageSize)
+    {
+        if (corners.Count == 0 || imageSize.Width <= 0 || imageSize.Height <= 0)
+        {
+            return false;
+        }
+
+        var minX = corners.Min(point => point.X);
+        var maxX = corners.Max(point => point.X);
+        var minY = corners.Min(point => point.Y);
+        var maxY = corners.Max(point => point.Y);
+
+        var boxWidth = Math.Max(0.0, maxX - minX);
+        var boxHeight = Math.Max(0.0, maxY - minY);
+        var coverage = (boxWidth * boxHeight) / (imageSize.Width * (double)imageSize.Height);
+        return coverage >= MinCornerCoverageRatio;
+    }
 
     private static Point3f[] BuildCheckerboardObjectPoints()
     {

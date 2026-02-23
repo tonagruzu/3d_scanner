@@ -31,6 +31,7 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Underlay fitting now performs outlier rejection and computes persisted fit confidence (`fitConfidence`) plus persisted detection path (`detectionMode`).
 - Calibration quality gates now include deterministic reprojection percentile gating (P95) with actionable failure reasons in artifacts/run summary.
 - Intrinsic calibration diagnostics now persist per-frame inclusion/exclusion traceability plus stable rejected-frame counters by reason and category.
+- Checkerboard intrinsic detection is hardened with SB detector fallback and low-coverage frame rejection diagnostics (`corners_low_coverage`, `corners_not_found_classic`).
 - GUI now includes:
 	- camera picker + refresh,
 	- preflight summary,
@@ -51,6 +52,7 @@ This document tracks the remaining implementation work needed to complete MVP sc
 1) **Camera intrinsic calibration from real frames (checkerboard/ChArUco)**
 - Implement corner detection and `cv::calibrateCamera`-equivalent flow in pipeline service.
 - Persist camera matrix, distortion coefficients, reprojection residual distribution, and frame inclusion/exclusion reasons.
+- Complete ChArUco calibration path once binding exposes required APIs (`InterpolateCornersCharuco`, `CalibrateCameraCharuco`) or equivalent wrapper is added.
 - Why high impact: unlocks physically meaningful geometry and removes placeholder calibration dependency.
 
 2) **Grid pose estimation + mm scale confidence from image geometry**
