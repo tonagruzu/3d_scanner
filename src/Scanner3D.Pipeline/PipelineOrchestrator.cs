@@ -33,7 +33,12 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             throw new InvalidOperationException($"Capture preflight failed: {reasons}");
         }
 
-        var capture = await captureService.CaptureAsync(session, captureSettings, cancellationToken);
+        var captureSession = capturePreflight.SelectedCamera is null
+            ? session
+            : session with { CameraDeviceId = capturePreflight.SelectedCamera.DeviceId };
+        var routedCaptureSettings = captureSettings with { PreferredBackend = capturePreflight.BackendCandidate };
+
+        var capture = await captureService.CaptureAsync(captureSession, routedCaptureSettings, cancellationToken);
 
         var calibration = await calibrationService.CalibrateAsync(session, cancellationToken);
         var residualSamples = await calibrationResidualProvider.GetResidualSamplesAsync(calibration.CalibrationProfileId, cancellationToken);

@@ -6,4 +6,5 @@ public sealed record CaptureSettings(
     bool LockWhiteBalance,
     string UnderlayPattern,
     string LightingProfile,
-    bool AllowMockFallback = false);
+    bool AllowMockFallback = false,
+    string? PreferredBackend = null);
