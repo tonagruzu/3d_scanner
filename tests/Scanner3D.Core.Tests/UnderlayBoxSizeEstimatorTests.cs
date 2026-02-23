@@ -55,6 +55,53 @@ public class UnderlayBoxSizeEstimatorTests
         Assert.InRange(estimate.PoseQuality, 0.0, 1.0);
     }
 
+    [Fact]
+    public void EstimateMeasuredBoxSizesMm_UsesCheckerboardGeometry_WhenIntrinsicCalibrationProvided()
+    {
+        var estimator = new UnderlayBoxSizeEstimator();
+        var previewPath = CreateCheckerboardPreviewImage();
+
+        try
+        {
+            var capture = BuildCaptureResult(
+                new CaptureFrame("f-001", DateTimeOffset.UtcNow, 100, 0.95, 0.86, true, previewPath),
+                new CaptureFrame("f-002", DateTimeOffset.UtcNow, 200, 0.96, 0.85, true, previewPath),
+                new CaptureFrame("f-003", DateTimeOffset.UtcNow, 300, 0.94, 0.87, true, previewPath));
+
+            var intrinsics = new IntrinsicCalibrationDetails(
+                PatternType: "checkerboard",
+                PatternColumns: 9,
+                PatternRows: 6,
+                SquareSizeMm: 10.0,
+                ImageWidthPx: 640,
+                ImageHeightPx: 480,
+                CameraMatrix:
+                [
+                    820, 0, 320,
+                    0, 820, 240,
+                    0, 0, 1
+                ],
+                DistortionCoefficients: [0, 0, 0, 0, 0],
+                UsedFrameIds: ["f-001", "f-002", "f-003"],
+                RejectedFrameReasons: []);
+
+            var estimate = estimator.EstimateMeasuredBoxSizesMm(capture, expectedBoxSizeMm: 10.0, intrinsics, targetSamples: 5);
+
+            Assert.Equal("preview-image", estimate.DetectionMode);
+            Assert.True(estimate.MeasuredBoxSizesMm.Count >= 3);
+            Assert.All(estimate.MeasuredBoxSizesMm, value => Assert.InRange(value, 9.78, 10.22));
+            Assert.InRange(estimate.ScaleConfidence, 0.65, 1.0);
+            Assert.InRange(estimate.PoseQuality, 0.60, 1.0);
+        }
+        finally
+        {
+            if (File.Exists(previewPath))
+            {
+                File.Delete(previewPath);
+            }
+        }
+    }
+
     private static string CreateGridPreviewImage()
     {
         var path = Path.Combine(Path.GetTempPath(), $"scanner3d-grid-{Guid.NewGuid():N}.png");
@@ -68,6 +115,36 @@ public class UnderlayBoxSizeEstimatorTests
         for (var y = 40; y < image.Height; y += 40)
         {
             Cv2.Line(image, new Point(0, y), new Point(image.Width - 1, y), new Scalar(60, 60, 60), 1);
+        }
+
+        Cv2.ImWrite(path, image);
+        return path;
+    }
+
+    private static string CreateCheckerboardPreviewImage()
+    {
+        const int squaresX = 10;
+        const int squaresY = 7;
+        const int square = 40;
+
+        var width = squaresX * square;
+        var height = squaresY * square;
+        var path = Path.Combine(Path.GetTempPath(), $"scanner3d-checker-{Guid.NewGuid():N}.png");
+        using var image = new Mat(new Size(width, height), MatType.CV_8UC1, Scalar.All(255));
+
+        for (var row = 0; row < squaresY; row++)
+        {
+            for (var col = 0; col < squaresX; col++)
+            {
+                if ((row + col) % 2 == 0)
+                {
+                    Cv2.Rectangle(
+                        image,
+                        new Rect(col * square, row * square, square, square),
+                        Scalar.All(0),
+                        thickness: -1);
+                }
+            }
         }
 
         Cv2.ImWrite(path, image);

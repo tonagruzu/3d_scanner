@@ -47,7 +47,10 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var captureQuality = captureQualityAnalyzer.Analyze(capture);
 
         var expectedUnderlayBoxSizeMm = 10.0;
-        var underlayEstimate = underlayBoxEstimator.EstimateMeasuredBoxSizesMm(capture, expectedUnderlayBoxSizeMm);
+        var underlayEstimate = underlayBoxEstimator.EstimateMeasuredBoxSizesMm(
+            capture,
+            expectedUnderlayBoxSizeMm,
+            calibration.IntrinsicCalibration);
         var underlayVerification = underlayValidator.Validate(
             underlayPatternId: "Mata-10mm-grid",
             detectionMode: underlayEstimate.DetectionMode,
