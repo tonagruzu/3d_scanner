@@ -11,6 +11,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var calibrationService = new CalibrationService();
         var calibrationResidualProvider = new MockCalibrationResidualProvider();
         var measurementService = new MeasurementService();
+        var meshService = new MeshService();
         var sketchService = new SketchService();
         var underlayValidator = new UnderlayPatternValidator();
         var validationWriter = new JsonValidationReportWriter();
@@ -74,6 +75,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
                 : "Validation fail: one or more measured dimensions exceed ±0.5 mm.");
 
         var outputDirectory = Path.Combine("output", session.SessionId.ToString("N"));
+            var meshPath = await meshService.GenerateObjAsync(session.SessionId, measurements, outputDirectory, cancellationToken);
         var sketches = await sketchService.GenerateOrthographicSketchesAsync(session.SessionId, measurements, outputDirectory, cancellationToken);
 
         var success = calibration.IsWithinTolerance && underlayVerification.Pass && validation.Pass;
@@ -99,7 +101,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             Calibration: calibration,
             UnderlayVerification: underlayVerification,
             Validation: validation,
-            MeshPath: Path.Combine(outputDirectory, "model.obj"),
+            MeshPath: meshPath,
             SketchPaths: sketches,
             ValidationReportPath: validationReportPath,
             Message: message);
