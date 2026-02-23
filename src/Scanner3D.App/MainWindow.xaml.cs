@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using Scanner3D.Core.Models;
 using Scanner3D.Core.Services;
 using Scanner3D.Pipeline;
@@ -140,6 +141,7 @@ public partial class MainWindow : Window
             StatusTextBlock.Text = "Running pipeline...";
             ValidationSummaryTextBlock.Text = "Processing";
             PreflightSummaryTextBlock.Text = "Processing";
+            ClearFramePreview();
             ArtifactListBox.Items.Clear();
             _latestResult = null;
             _latestSummaryFilePath = null;
@@ -262,6 +264,7 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = result.Success ? "Completed (pass)" : "Completed (quality gate failed)";
         ValidationSummaryTextBlock.Text = result.Validation.Summary;
         PreflightSummaryTextBlock.Text = BuildPreflightUiSummary(result.CapturePreflight, result.Capture);
+        DisplayFramePreview(result.Capture);
 
         ArtifactListBox.Items.Clear();
         AddArtifactListItem("Mesh", result.MeshPath);
@@ -379,6 +382,47 @@ public partial class MainWindow : Window
         var warningCount = preflight.Warnings.Count;
         var issueCount = preflight.BlockingIssues.Count;
         return $"{status} | backend={preflight.BackendCandidate} | warnings={warningCount} | blocking={issueCount}";
+    }
+
+    private void DisplayFramePreview(CaptureResult capture)
+    {
+        var latestPreviewFrame = capture.Frames
+            .Where(frame => !string.IsNullOrWhiteSpace(frame.PreviewImagePath) && File.Exists(frame.PreviewImagePath))
+            .OrderBy(frame => frame.CapturedAt)
+            .LastOrDefault();
+
+        if (latestPreviewFrame is null || string.IsNullOrWhiteSpace(latestPreviewFrame.PreviewImagePath))
+        {
+            ClearFramePreview();
+            FramePreviewStatusTextBlock.Text = "No frame preview file was captured for this run.";
+            return;
+        }
+
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(latestPreviewFrame.PreviewImagePath, UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            FramePreviewImage.Source = bitmap;
+            FramePreviewPlaceholderTextBlock.Visibility = Visibility.Collapsed;
+            FramePreviewStatusTextBlock.Text = $"Latest frame: {latestPreviewFrame.FrameId} ({(latestPreviewFrame.Accepted ? "accepted" : "rejected")})";
+        }
+        catch
+        {
+            ClearFramePreview();
+            FramePreviewStatusTextBlock.Text = "Preview image could not be loaded.";
+        }
+    }
+
+    private void ClearFramePreview()
+    {
+        FramePreviewImage.Source = null;
+        FramePreviewPlaceholderTextBlock.Visibility = Visibility.Visible;
+        FramePreviewStatusTextBlock.Text = string.Empty;
     }
 
     private void ExportRunSummary_Click(object sender, RoutedEventArgs e)

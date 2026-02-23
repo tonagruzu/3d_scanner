@@ -32,6 +32,15 @@
                 <TextBlock Text="Run History" FontWeight="SemiBold"/>
                 <ListBox x:Name="RunHistoryListBox" Height="90" SelectionChanged="RunHistoryListBox_SelectionChanged" />
 
+                <TextBlock Text="Frame Preview" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                <Border BorderThickness="1" Padding="6" Height="170">
+                    <Grid>
+                        <Image x:Name="FramePreviewImage" Stretch="Uniform"/>
+                        <TextBlock x:Name="FramePreviewPlaceholderTextBlock" Text="No preview available" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="FramePreviewStatusTextBlock" Text="" Margin="0,4,0,0" TextWrapping="Wrap"/>
+
                 <TextBlock Text="Camera" FontWeight="SemiBold" Margin="0,10,0,0"/>
                 <Grid Margin="0,2,0,0">
                     <Grid.ColumnDefinitions>

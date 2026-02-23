@@ -43,13 +43,16 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
             var sharpness = EvaluateSharpnessScore(frame);
             var exposure = EvaluateExposureScore(frame);
             var accepted = sharpness >= 0.82 && exposure >= 0.82;
+            var frameId = $"opencv-cam-{index.Value}-f-{frameIndex:000}";
+            var previewImagePath = SavePreviewFrame(frame, frameId);
 
             frames.Add(new CaptureFrame(
-                FrameId: $"opencv-cam-{index.Value}-f-{frameIndex:000}",
+                FrameId: frameId,
                 CapturedAt: DateTimeOffset.UtcNow.AddMilliseconds(frameIndex * 80),
                 SharpnessScore: sharpness,
                 ExposureScore: exposure,
-                Accepted: accepted));
+                Accepted: accepted,
+                PreviewImagePath: previewImagePath));
 
             await Task.Delay(20, cancellationToken);
         }
@@ -114,5 +117,22 @@ public sealed class OpenCvFrameCaptureProvider : IFrameCaptureProvider
         var distanceFromMid = Math.Abs(mean - 127.5);
         var normalized = 1.0 - (distanceFromMid / 127.5);
         return Math.Clamp(normalized, 0.0, 1.0);
+    }
+
+    private static string? SavePreviewFrame(Mat frame, string frameId)
+    {
+        try
+        {
+            var previewDirectory = Path.Combine(Path.GetTempPath(), "scanner3d-preview");
+            Directory.CreateDirectory(previewDirectory);
+
+            var filePath = Path.Combine(previewDirectory, $"{frameId}-{Guid.NewGuid():N}.jpg");
+            Cv2.ImWrite(filePath, frame);
+            return filePath;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

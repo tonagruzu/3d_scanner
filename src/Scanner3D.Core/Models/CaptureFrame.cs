@@ -5,4 +5,5 @@ public sealed record CaptureFrame(
     DateTimeOffset CapturedAt,
     double SharpnessScore,
     double ExposureScore,
-    bool Accepted);
+    bool Accepted,
+    string? PreviewImagePath = null);
