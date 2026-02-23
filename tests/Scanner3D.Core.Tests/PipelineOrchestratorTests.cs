@@ -63,6 +63,17 @@ public class PipelineOrchestratorTests
             Assert.True(root.TryGetProperty("capture", out _));
             Assert.True(root.TryGetProperty("captureQuality", out var captureQuality));
             Assert.True(root.TryGetProperty("calibrationQuality", out var calibrationQuality));
+            Assert.True(root.TryGetProperty("captureCapabilities", out var captureCapabilities));
+
+            var selectedCamera = captureCapabilities.GetProperty("selectedCamera");
+            Assert.False(string.IsNullOrWhiteSpace(selectedCamera.GetProperty("deviceId").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(selectedCamera.GetProperty("displayName").GetString()));
+
+            var backendUsed = captureCapabilities.GetProperty("backendUsed").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(backendUsed));
+
+            var modeList = captureCapabilities.GetProperty("modeList");
+            Assert.True(modeList.GetArrayLength() >= 1);
 
             var acceptedRatio = captureQuality.GetProperty("acceptedRatio").GetDouble();
             Assert.True(acceptedRatio >= 0);
