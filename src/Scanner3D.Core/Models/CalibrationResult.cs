@@ -6,4 +6,5 @@ public sealed record CalibrationResult(
     double ReprojectionErrorPx,
     double ScaleErrorMm,
     bool IsWithinTolerance,
-    string Notes);
+    string Notes,
+    IntrinsicCalibrationDetails? IntrinsicCalibration = null);

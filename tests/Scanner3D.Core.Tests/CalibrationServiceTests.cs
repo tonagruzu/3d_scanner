@@ -1,4 +1,5 @@
 using Scanner3D.Core.Models;
+using OpenCvSharp;
 using Scanner3D.Pipeline;
 using Xunit;
 
@@ -51,6 +52,41 @@ public class CalibrationServiceTests
     }
 
     [Fact]
+    public async Task CalibrateAsync_UsesCheckerboardIntrinsics_WhenDetectablePreviewFramesAreProvided()
+    {
+        var service = new CalibrationService();
+        var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "usb-hd-cam-01", "calibration-test");
+
+        var preview1 = CreateCheckerboardPreviewImage();
+        var preview2 = CreateCheckerboardPreviewImage(rotationDegrees: 2.0);
+        var preview3 = CreateCheckerboardPreviewImage(rotationDegrees: -2.0);
+
+        try
+        {
+            var capture = BuildCaptureResult(
+                new CaptureFrame("f1", DateTimeOffset.UtcNow, 100, 0.95, 0.90, true, preview1),
+                new CaptureFrame("f2", DateTimeOffset.UtcNow, 200, 0.93, 0.88, true, preview2),
+                new CaptureFrame("f3", DateTimeOffset.UtcNow, 300, 0.92, 0.87, true, preview3));
+
+            var result = await service.CalibrateAsync(session, capture);
+
+            Assert.NotNull(result.IntrinsicCalibration);
+            Assert.Contains("checkerboard-derived", result.Notes, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("checkerboard", result.IntrinsicCalibration!.PatternType);
+            Assert.Equal(9, result.IntrinsicCalibration.PatternColumns);
+            Assert.Equal(6, result.IntrinsicCalibration.PatternRows);
+            Assert.True(result.IntrinsicCalibration.CameraMatrix.Count == 9);
+            Assert.True(result.IntrinsicCalibration.UsedFrameIds.Count >= 3);
+        }
+        finally
+        {
+            DeleteFileIfExists(preview1);
+            DeleteFileIfExists(preview2);
+            DeleteFileIfExists(preview3);
+        }
+    }
+
+    [Fact]
     public async Task FrameBasedResidualProvider_UsesCaptureFrames_WhenAvailable()
     {
         var provider = new FrameBasedCalibrationResidualProvider();
@@ -91,5 +127,55 @@ public class CalibrationServiceTests
             FrameTimestampSource: "system_clock_utc",
             FrameTimestampsMonotonic: true,
             Notes: "test");
+    }
+
+    private static string CreateCheckerboardPreviewImage(double rotationDegrees = 0)
+    {
+        const int boardColumns = 10;
+        const int boardRows = 7;
+        const int squareSizePx = 48;
+
+        var width = boardColumns * squareSizePx;
+        var height = boardRows * squareSizePx;
+        using var image = new Mat(new Size(width, height), MatType.CV_8UC1, Scalar.All(255));
+
+        for (var row = 0; row < boardRows; row++)
+        {
+            for (var column = 0; column < boardColumns; column++)
+            {
+                if ((row + column) % 2 == 0)
+                {
+                    var rect = new Rect(column * squareSizePx, row * squareSizePx, squareSizePx, squareSizePx);
+                    Cv2.Rectangle(image, rect, Scalar.All(0), -1);
+                }
+            }
+        }
+
+        Mat output;
+        if (Math.Abs(rotationDegrees) > 0.001)
+        {
+            output = new Mat();
+            var center = new Point2f(width / 2f, height / 2f);
+            var transform = Cv2.GetRotationMatrix2D(center, rotationDegrees, 1.0);
+            Cv2.WarpAffine(image, output, transform, image.Size(), InterpolationFlags.Linear, BorderTypes.Constant, Scalar.All(255));
+            transform.Dispose();
+        }
+        else
+        {
+            output = image.Clone();
+        }
+
+        var path = Path.Combine(Path.GetTempPath(), $"scanner3d-checker-{Guid.NewGuid():N}.png");
+        Cv2.ImWrite(path, output);
+        output.Dispose();
+        return path;
+    }
+
+    private static void DeleteFileIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
     }
 }
