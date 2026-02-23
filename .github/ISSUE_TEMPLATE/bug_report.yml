@@ -1,0 +1,29 @@
+name: Bug Report
+description: Report incorrect behavior
+title: "bug: "
+labels: ["type:bug", "status:triage"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: What happened and what was expected?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction Steps
+      placeholder: Step-by-step reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, camera model, app version, configuration
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs/Artifacts
+      placeholder: Relevant logs, screenshots, or sample outputs

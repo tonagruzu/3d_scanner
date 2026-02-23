@@ -1,0 +1,24 @@
+name: Task
+description: Implementation or maintenance task
+title: "task: "
+labels: ["type:task", "status:ready"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      placeholder: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of Done
+      placeholder: What evidence proves completion?
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      placeholder: Related issues or blockers

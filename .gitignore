@@ -1,0 +1,36 @@
+# Build outputs
+bin/
+obj/
+out/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+logs/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python artifacts (if used for CV experimentation)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Temporary datasets and generated scan payloads
+data/tmp/
+scans/tmp/

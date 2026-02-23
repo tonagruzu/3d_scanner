@@ -1,0 +1,28 @@
+name: Feature Request
+description: Propose a feature aligned with project roadmap
+title: "feat: "
+labels: ["type:feature", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the requested feature and why it matters.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      placeholder: What user or system problem are we solving?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      placeholder: List measurable criteria for completion.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and Constraints
+      placeholder: Include precision, performance, and integration constraints.

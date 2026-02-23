@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-docs-and-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure required files exist
+        run: |
+          test -f README.md
+          test -f CONTRIBUTING.md
+          test -f SECURITY.md
+          test -f AGENTS.md
+          test -f .github/PULL_REQUEST_TEMPLATE.md
+          test -f .github/dependabot.yml
+
+  dotnet-build-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Discover solution
+        id: sln
+        shell: pwsh
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+          if ($null -eq $sln) {
+            "hasSolution=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            "hasSolution=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "solutionPath=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      - name: Restore
+        if: steps.sln.outputs.hasSolution == 'true'
+        run: dotnet restore "${{ steps.sln.outputs.solutionPath }}"
+
+      - name: Build
+        if: steps.sln.outputs.hasSolution == 'true'
+        run: dotnet build "${{ steps.sln.outputs.solutionPath }}" --configuration Release --no-restore
+
+      - name: Test
+        if: steps.sln.outputs.hasSolution == 'true'
+        run: dotnet test "${{ steps.sln.outputs.solutionPath }}" --configuration Release --no-build --logger trx
+
+      - name: No solution yet notice
+        if: steps.sln.outputs.hasSolution != 'true'
+        run: echo "No .sln found yet. Skipping dotnet build/test until implementation phase."
