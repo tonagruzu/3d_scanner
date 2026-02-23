@@ -22,6 +22,8 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Capture preflight fail-fast gate is implemented and persisted in `validation.json` (`capturePreflight`).
 - Capture capability metadata is persisted (`selectedCamera`, `modeList`, `backendUsed`).
 - Capture diagnostics include lock verification signals, timestamp source, monotonic timestamp check, and reliability warnings.
+- In-session reliability controller is implemented (minimum accepted target with bounded recapture attempts and explicit failure reason).
+- Backend-native frame timestamps are captured where available and persisted timing quality metrics are reported (`timestampCoverageRatio`, `meanInterFrameIntervalMs`, `interFrameIntervalJitterMs`).
 - Pipeline success now includes capture acceptance gating (runs with `0` accepted frames no longer report `PASS`).
 - GUI now includes:
 	- camera picker + refresh,
@@ -40,8 +42,6 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Phase 6: not started
 
 ### Main Remaining Gaps in Phase 1
-- Add robust in-session reliability controller (minimum accepted target + bounded recapture attempts).
-- Upgrade timestamping from system-clock approximation to backend-originated frame timing where available.
 - Improve lock verification depth (provider capability probe + explicit unsupported/error states by backend/device).
 
 ## Remaining Plan (Execution Order)
