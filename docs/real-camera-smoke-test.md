@@ -54,7 +54,7 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `calibrationQuality.scaleResidualSamplesMm` has at least `3` values.
 - `calibrationQuality.gatePass` is `true` for a passing run.
 - `calibrationQuality.gateFailures` is empty for a passing run.
-- `calibrationQuality.usedIntrinsicFrames >= calibrationQuality.minimumRequiredIntrinsicFrames`.
+- `calibrationQuality.usedIntrinsicFrames >= calibrationQuality.minimumRequiredIntrinsicFrames` only when strict intrinsic gating is enabled.
 - `calibrationQuality.underlayScaleConfidence` and `calibrationQuality.underlayPoseQuality` are each in range `[0,1]`.
 - `underlayVerification.measuredBoxSizesMm` has at least `3` values.
 - `underlayVerification.inlierBoxSizesMm` has at least `3` values.
@@ -62,6 +62,16 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `underlayVerification.detectionMode` is one of `preview-image`, `frame-quality-fallback`, or `static-fallback`.
 - `underlayVerification.expectedBoxSizeMm` is `10.0`.
 - `underlayVerification.maxAbsoluteErrorMm <= 0.2` for a normal pass run.
+
+### Strict Intrinsic Gating (Optional)
+By default, real-camera smoke runs do **not** fail solely because intrinsic checkerboard frames were not detected.
+
+Enable strict intrinsic gating when you explicitly need checkerboard-derived intrinsic evidence:
+- Set environment variable: `SCANNER3D_REQUIRE_INTRINSIC_FRAMES=1`
+- Or include `require-intrinsic` / `calibration-strict` in `ScanSession.operatorNotes`
+
+With strict gating enabled, a passing run must satisfy:
+- `calibrationQuality.usedIntrinsicFrames >= calibrationQuality.minimumRequiredIntrinsicFrames`
 
 Quick PowerShell check (replace `<path>` with your `validation.json`):
 

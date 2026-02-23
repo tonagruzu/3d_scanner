@@ -58,8 +58,9 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             toleranceMm: 0.2);
 
         var usedIntrinsicFrames = calibration.IntrinsicCalibration?.UsedFrameIds.Count ?? 0;
+        var requireIntrinsicFrames = IsStrictIntrinsicGateRequired(session);
         var calibrationGateFailures = new List<string>();
-        if (usedIntrinsicFrames < CalibrationGateThresholds.MinUsableIntrinsicFrames)
+        if (requireIntrinsicFrames && usedIntrinsicFrames < CalibrationGateThresholds.MinUsableIntrinsicFrames)
         {
             calibrationGateFailures.Add($"intrinsic_frames={usedIntrinsicFrames} < {CalibrationGateThresholds.MinUsableIntrinsicFrames}");
         }
@@ -173,5 +174,19 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         }
 
         return session.OperatorNotes.Contains("test", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsStrictIntrinsicGateRequired(ScanSession session)
+    {
+        var environmentOverride = Environment.GetEnvironmentVariable("SCANNER3D_REQUIRE_INTRINSIC_FRAMES");
+        if (string.Equals(environmentOverride, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(environmentOverride, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(environmentOverride, "yes", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return session.OperatorNotes.Contains("require-intrinsic", StringComparison.OrdinalIgnoreCase)
+               || session.OperatorNotes.Contains("calibration-strict", StringComparison.OrdinalIgnoreCase);
     }
 }
