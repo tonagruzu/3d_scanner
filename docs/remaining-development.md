@@ -26,6 +26,8 @@ This document tracks the remaining implementation work needed to complete MVP sc
 - Backend-native frame timestamps are captured where available and persisted timing quality metrics are reported (`timestampCoverageRatio`, `meanInterFrameIntervalMs`, `interFrameIntervalJitterMs`).
 - Lock capability probing and explicit lock states are implemented (`supported`/`unsupported`/`error` at preflight and `verified`/`failed`/`unsupported`/`error` at runtime diagnostics).
 - Pipeline success now includes capture acceptance gating (runs with `0` accepted frames no longer report `PASS`).
+- Calibration now consumes capture context and derives calibration metrics from captured frame quality (with deterministic fallback).
+- Underlay verification now uses frame-derived measured box-size estimates from preview images with quality-based fallback.
 - GUI now includes:
 	- camera picker + refresh,
 	- preflight summary,
@@ -35,15 +37,12 @@ This document tracks the remaining implementation work needed to complete MVP sc
 	- frame-quality metrics with required pass thresholds.
 
 ### Phase Progress Snapshot
-- Phase 1: **in progress** (major milestones complete; reliability-in-session still needs hardening)
-- Phase 2: not started
+- Phase 1: **completed**
+- Phase 2: **in progress** (initial calibration + underlay real-image-driven path implemented)
 - Phase 3: not started
 - Phase 4: not started
 - Phase 5: not started
 - Phase 6: not started
-
-### Main Remaining Gaps in Phase 1
-- No major Phase 1 gaps remain; continue with real-camera smoke validation and stability monitoring before moving to Phase 2.
 
 ## Remaining Plan (Execution Order)
 
