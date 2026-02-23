@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly IPipelineOrchestrator _pipelineOrchestrator;
     private readonly List<RunHistoryEntry> _runHistory = [];
     private PipelineResult? _latestResult;
+    private string? _latestSummaryFilePath;
     private string? _latestOutputDirectory;
 
     public MainWindow()
@@ -33,7 +34,9 @@ public partial class MainWindow : Window
             OpenOutputButton.IsEnabled = false;
             CopySummaryButton.IsEnabled = false;
             ExportSummaryButton.IsEnabled = false;
+            OpenSummaryButton.IsEnabled = false;
             _latestResult = null;
+            _latestSummaryFilePath = null;
             _latestOutputDirectory = null;
 
             var session = new ScanSession(
@@ -223,6 +226,24 @@ public partial class MainWindow : Window
         var filePath = Path.Combine(_latestOutputDirectory, fileName);
 
         File.WriteAllText(filePath, summary, Encoding.UTF8);
+        _latestSummaryFilePath = filePath;
+        OpenSummaryButton.IsEnabled = File.Exists(_latestSummaryFilePath);
         MessageBox.Show($"Run summary exported to:\n{filePath}", "Export Run Summary", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OpenLastSummaryFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_latestSummaryFilePath) || !File.Exists(_latestSummaryFilePath))
+        {
+            MessageBox.Show("No exported summary file is available yet.", "Open Last Summary File", MessageBoxButton.OK, MessageBoxImage.Information);
+            OpenSummaryButton.IsEnabled = false;
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = _latestSummaryFilePath,
+            UseShellExecute = true
+        });
     }
 }

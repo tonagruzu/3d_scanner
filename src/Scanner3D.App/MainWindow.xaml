@@ -36,6 +36,7 @@
             <Button x:Name="OpenOutputButton" Width="220" Height="36" Margin="12,0,0,0" HorizontalAlignment="Left" Content="Open Output Folder" Click="OpenOutputFolder_Click" IsEnabled="False"/>
             <Button x:Name="CopySummaryButton" Width="220" Height="36" Margin="12,0,0,0" HorizontalAlignment="Left" Content="Copy Run Summary" Click="CopyRunSummary_Click" IsEnabled="False"/>
             <Button x:Name="ExportSummaryButton" Width="220" Height="36" Margin="12,0,0,0" HorizontalAlignment="Left" Content="Export Run Summary" Click="ExportRunSummary_Click" IsEnabled="False"/>
+            <Button x:Name="OpenSummaryButton" Width="220" Height="36" Margin="12,0,0,0" HorizontalAlignment="Left" Content="Open Last Summary File" Click="OpenLastSummaryFile_Click" IsEnabled="False"/>
         </StackPanel>
     </Grid>
 </Window>
