@@ -12,6 +12,7 @@ public sealed record CaptureCapabilityDetails(
 public sealed record ScanQualityReport(
     Guid SessionId,
     DateTimeOffset GeneratedAt,
+    CapturePreflightResult? CapturePreflight,
     CaptureResult Capture,
     CaptureQualitySummary CaptureQuality,
     UnderlayVerificationResult UnderlayVerification,

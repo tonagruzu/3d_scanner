@@ -8,6 +8,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
     public async Task<PipelineResult> ExecuteAsync(ScanSession session, CancellationToken cancellationToken = default)
     {
         var captureService = new CaptureService();
+        var capturePreflightService = new CapturePreflightService();
         var calibrationService = new CalibrationService();
         var calibrationResidualProvider = new MockCalibrationResidualProvider();
         var measurementService = new MeasurementService();
@@ -22,7 +23,15 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             LockExposure: true,
             LockWhiteBalance: true,
             UnderlayPattern: "Mata-10mm-grid",
-            LightingProfile: "diffuse-white-5600k");
+            LightingProfile: "diffuse-white-5600k",
+            AllowMockFallback: IsMockFallbackAllowed(session));
+
+        var capturePreflight = await capturePreflightService.EvaluateAsync(session, captureSettings, cancellationToken);
+        if (!capturePreflight.Pass)
+        {
+            var reasons = string.Join(" | ", capturePreflight.BlockingIssues);
+            throw new InvalidOperationException($"Capture preflight failed: {reasons}");
+        }
 
         var capture = await captureService.CaptureAsync(session, captureSettings, cancellationToken);
 
@@ -86,6 +95,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var qualityReport = new ScanQualityReport(
             SessionId: session.SessionId,
             GeneratedAt: DateTimeOffset.UtcNow,
+            CapturePreflight: capturePreflight,
             Capture: capture,
             CaptureQuality: captureQuality,
             UnderlayVerification: underlayVerification,
@@ -107,5 +117,18 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             Message: message);
 
         return result;
+    }
+
+    private static bool IsMockFallbackAllowed(ScanSession session)
+    {
+        var environmentOverride = Environment.GetEnvironmentVariable("SCANNER3D_ALLOW_MOCK_FALLBACK");
+        if (string.Equals(environmentOverride, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(environmentOverride, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(environmentOverride, "yes", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return session.OperatorNotes.Contains("test", StringComparison.OrdinalIgnoreCase);
     }
 }

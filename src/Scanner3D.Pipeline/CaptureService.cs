@@ -64,6 +64,11 @@ public sealed class CaptureService : ICaptureService
         var frameCaptureResult = await _frameCaptureProvider.CaptureFramesAsync(selectedDeviceId, settings, cancellationToken);
         var frames = frameCaptureResult.Frames;
 
+        if (!settings.AllowMockFallback && string.Equals(frameCaptureResult.Diagnostics.BackendUsed, "mock", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Capture provider fell back to mock backend, but mock fallback is disabled for this run.");
+        }
+
         var acceptedFrameCount = frames.Count(frame => frame.Accepted);
         var notes = $"device={selectedDeviceName}; mode={selectedMode}; backend={frameCaptureResult.Diagnostics.BackendUsed}; lockExposure={settings.LockExposure}; exposureLockVerified={frameCaptureResult.Diagnostics.ExposureLockVerified?.ToString() ?? "unknown"}; lockWhiteBalance={settings.LockWhiteBalance}; whiteBalanceLockVerified={frameCaptureResult.Diagnostics.WhiteBalanceLockVerified?.ToString() ?? "unknown"}; timestampSource={frameCaptureResult.Diagnostics.TimestampSource}; underlay={settings.UnderlayPattern}; lighting={settings.LightingProfile}";
 

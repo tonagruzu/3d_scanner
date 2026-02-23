@@ -43,7 +43,7 @@ public class PipelineOrchestratorTests
     public async Task ExecuteAsync_ValidationReport_ContainsMeasurements()
     {
         var orchestrator = new PipelineOrchestrator();
-        var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "test-device", "validation-check");
+        var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "test-device", "validation-test-check");
 
         var result = await orchestrator.ExecuteAsync(session);
 
@@ -61,9 +61,13 @@ public class PipelineOrchestratorTests
             Assert.True(root.TryGetProperty("calibration", out _));
             Assert.True(root.TryGetProperty("validation", out _));
             Assert.True(root.TryGetProperty("capture", out _));
+            Assert.True(root.TryGetProperty("capturePreflight", out var capturePreflight));
             Assert.True(root.TryGetProperty("captureQuality", out var captureQuality));
             Assert.True(root.TryGetProperty("calibrationQuality", out var calibrationQuality));
             Assert.True(root.TryGetProperty("captureCapabilities", out var captureCapabilities));
+
+            Assert.True(capturePreflight.GetProperty("pass").GetBoolean());
+            Assert.True(capturePreflight.GetProperty("modeList").GetArrayLength() >= 1);
 
             var selectedCamera = captureCapabilities.GetProperty("selectedCamera");
             Assert.False(string.IsNullOrWhiteSpace(selectedCamera.GetProperty("deviceId").GetString()));

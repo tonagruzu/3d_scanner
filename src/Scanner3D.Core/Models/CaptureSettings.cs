@@ -5,4 +5,5 @@ public sealed record CaptureSettings(
     bool LockExposure,
     bool LockWhiteBalance,
     string UnderlayPattern,
-    string LightingProfile);
+    string LightingProfile,
+    bool AllowMockFallback = false);

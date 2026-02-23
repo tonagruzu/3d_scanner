@@ -12,7 +12,7 @@ public class CaptureServiceTests
     {
         var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockCameraModeProvider(), new MockFrameCaptureProvider());
         var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "usb-hd-cam-01", "capture-test");
-        var settings = new CaptureSettings(8, true, true, "Mata-10mm-grid", "diffuse");
+        var settings = new CaptureSettings(8, true, true, "Mata-10mm-grid", "diffuse", AllowMockFallback: true);
 
         var result = await service.CaptureAsync(session, settings);
 
@@ -37,7 +37,7 @@ public class CaptureServiceTests
     {
         var service = new CaptureService(new MockCameraDeviceDiscovery(), new MockCameraModeProvider(), new MockFrameCaptureProvider());
         var session = new ScanSession(Guid.NewGuid(), DateTimeOffset.UtcNow, "missing-camera", "capture-test");
-        var settings = new CaptureSettings(5, true, false, "Mata-10mm-grid", "diffuse");
+        var settings = new CaptureSettings(5, true, false, "Mata-10mm-grid", "diffuse", AllowMockFallback: true);
 
         var result = await service.CaptureAsync(session, settings);
 
