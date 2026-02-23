@@ -55,6 +55,7 @@ In the same `validation.json`, verify the new Phase 2 starter outputs:
 - `underlayVerification.measuredBoxSizesMm` has at least `3` values.
 - `underlayVerification.inlierBoxSizesMm` has at least `3` values.
 - `underlayVerification.fitConfidence` is in range `[0,1]` (higher is better fit confidence).
+- `underlayVerification.detectionMode` is one of `preview-image`, `frame-quality-fallback`, or `static-fallback`.
 - `underlayVerification.expectedBoxSizeMm` is `10.0`.
 - `underlayVerification.maxAbsoluteErrorMm <= 0.2` for a normal pass run.
 
@@ -68,6 +69,7 @@ $j = Get-Content "<path>" -Raw | ConvertFrom-Json
 "UnderlaySamples={0}" -f $j.underlayVerification.measuredBoxSizesMm.Count
 "UnderlayInlierSamples={0}" -f $j.underlayVerification.inlierBoxSizesMm.Count
 "UnderlayFitConfidence={0}" -f $j.underlayVerification.fitConfidence
+"UnderlayDetectionMode={0}" -f $j.underlayVerification.detectionMode
 "UnderlayExpected={0}" -f $j.underlayVerification.expectedBoxSizeMm
 "UnderlayMaxError={0}" -f $j.underlayVerification.maxAbsoluteErrorMm
 ```
