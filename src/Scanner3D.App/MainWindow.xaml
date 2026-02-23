@@ -1,7 +1,7 @@
 <Window x:Class="Scanner3D.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="3D Scanner" Height="480" Width="900">
+        Title="3D Scanner" Height="560" Width="900">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -15,7 +15,16 @@
             <StackPanel>
                 <TextBlock Text="Capture and reconstruction pipeline is currently in bootstrap mode." Margin="0,0,0,8"/>
                 <TextBlock Text="Target precision: ±0.5 mm (validated scope)." Margin="0,0,0,8"/>
-                <TextBlock Text="Outputs: OBJ/STL mesh + six dimensioned orthographic sketches." />
+                <TextBlock Text="Outputs: OBJ/STL mesh + six dimensioned orthographic sketches." Margin="0,0,0,14"/>
+
+                <TextBlock Text="Status" FontWeight="SemiBold"/>
+                <TextBlock x:Name="StatusTextBlock" Text="Idle" Margin="0,2,0,10"/>
+
+                <TextBlock Text="Validation" FontWeight="SemiBold"/>
+                <TextBlock x:Name="ValidationSummaryTextBlock" Text="No run yet" Margin="0,2,0,10" TextWrapping="Wrap"/>
+
+                <TextBlock Text="Artifacts" FontWeight="SemiBold"/>
+                <ListBox x:Name="ArtifactListBox" Height="170" />
             </StackPanel>
         </Border>
 
