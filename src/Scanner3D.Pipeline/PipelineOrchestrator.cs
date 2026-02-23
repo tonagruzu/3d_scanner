@@ -9,6 +9,7 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
     {
         var underlayValidator = new UnderlayPatternValidator();
         var validationWriter = new JsonValidationReportWriter();
+        var captureQualityAnalyzer = new CaptureQualityAnalyzer();
 
         var capturedFrames = new List<CaptureFrame>
         {
@@ -31,6 +32,17 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
             ScaleErrorMm: 0.12,
             IsWithinTolerance: true,
             Notes: "Stub calibration summary. Replace with real solve and scale checks.");
+
+        var calibrationQuality = new CalibrationQualitySummary(
+            ReprojectionErrorPx: calibration.ReprojectionErrorPx,
+            ScaleErrorMm: calibration.ScaleErrorMm,
+            ReprojectionResidualSamplesPx: new List<double> { 0.31, 0.44, 0.49, 0.42, 0.38 },
+            ScaleResidualSamplesMm: new List<double> { 0.08, 0.12, 0.10, 0.14, 0.11 },
+            Summary: calibration.IsWithinTolerance
+                ? "Calibration quality is within configured tolerance limits."
+                : "Calibration quality is outside tolerance limits.");
+
+        var captureQuality = captureQualityAnalyzer.Analyze(capture);
 
         var underlayVerification = underlayValidator.Validate(
             underlayPatternId: "Mata-10mm-grid",
@@ -81,8 +93,11 @@ public sealed class PipelineOrchestrator : IPipelineOrchestrator
         var qualityReport = new ScanQualityReport(
             SessionId: session.SessionId,
             GeneratedAt: DateTimeOffset.UtcNow,
+            Capture: capture,
+            CaptureQuality: captureQuality,
             UnderlayVerification: underlayVerification,
             Calibration: calibration,
+            CalibrationQuality: calibrationQuality,
             Validation: validation);
 
         var validationReportPath = await validationWriter.WriteAsync(qualityReport, outputDirectory, cancellationToken);
