@@ -5,7 +5,9 @@ public sealed record UnderlayVerificationResult(
     string UnderlayPatternId,
     double ExpectedBoxSizeMm,
     IReadOnlyList<double> MeasuredBoxSizesMm,
+    IReadOnlyList<double> InlierBoxSizesMm,
     double MeanBoxSizeMm,
     double MaxAbsoluteErrorMm,
+    double FitConfidence,
     bool Pass,
     string Notes);

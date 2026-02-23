@@ -30,6 +30,8 @@ public class PipelineOrchestratorTests
         Assert.True(result.UnderlayVerification.Performed);
         Assert.True(result.UnderlayVerification.Pass);
         Assert.Equal(10.0, result.UnderlayVerification.ExpectedBoxSizeMm);
+        Assert.True(result.UnderlayVerification.InlierBoxSizesMm.Count >= 3);
+        Assert.InRange(result.UnderlayVerification.FitConfidence, 0.0, 1.0);
         Assert.True(result.Validation.Pass);
         Assert.Equal(0.5, result.Validation.ToleranceMm);
         Assert.True(result.Capture.AcceptedFrameCount >= 0);
@@ -69,6 +71,9 @@ public class PipelineOrchestratorTests
             Assert.True(root.TryGetProperty("captureQuality", out var captureQuality));
             Assert.True(root.TryGetProperty("calibrationQuality", out var calibrationQuality));
             Assert.True(root.TryGetProperty("captureCapabilities", out var captureCapabilities));
+            Assert.True(root.GetProperty("underlayVerification").TryGetProperty("fitConfidence", out var fitConfidence));
+            Assert.InRange(fitConfidence.GetDouble(), 0.0, 1.0);
+            Assert.True(root.GetProperty("underlayVerification").GetProperty("inlierBoxSizesMm").GetArrayLength() >= 3);
 
             Assert.True(capturePreflight.GetProperty("pass").GetBoolean());
             Assert.True(capturePreflight.GetProperty("modeList").GetArrayLength() >= 1);
